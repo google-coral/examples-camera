@@ -35,17 +35,18 @@ class CONSTANTS:
 class Main:
     def __init__(self):
         signal.signal(signal.SIGINT, self.sigint_handler)
-        self.video_writer = VideoWriter(output_path='./videos')
+        self.video_writer = VideoWriter(output_path='~/mnt/resources/videos')
         self.face_detector = FaceDetector(model_path='/home/mendel/cameraSamples/examples-camera/all_models/mobilenet_ssd_v2_face_quant_postprocess_edgetpu.tflite')
         self.last_face_seen_timestamp = 0
 
     def _callback(self, image, svg_canvas):
         face_rois_in_image = self.face_detector.predict(image)
+        did_find_at_least_one_face = len(face_rois_in_image) > 0
 
         if self.video_writer.is_video_recording_in_progress():
             self.video_writer.add_image(numpy.array(image))
 
-            if len(face_rois_in_image) > 0:
+            if did_find_at_least_one_face:
                 self.last_face_seen_timestamp = time.time()
                 self.video_writer.save_image_at_same_path(numpy.array(image.crop(face_rois_in_image[0])))
 
@@ -53,7 +54,7 @@ class Main:
                 self.video_writer.stop_video_recording()
                 self.last_face_seen_timestamp = 0
 
-        elif len(face_rois_in_image) > 0:
+        elif did_find_at_least_one_face:
             self.last_face_seen_timestamp = time.time()
             self.video_writer.start_video_recording(numpy.array(image))
             self.video_writer.save_image_at_same_path(numpy.array(image.crop(face_rois_in_image[0])))
