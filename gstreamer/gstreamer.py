@@ -53,7 +53,7 @@ def on_new_sample(sink, overlay, screen_size, appsink_size, user_function):
 def detectCoralDevBoard():
   try:
     if 'MX8MQ' in open('/sys/firmware/devicetree/base/model').read():
-      print('Detected EdgeTPU dev board.')
+      print('Detected Edge TPU dev board.')
       return True
   except: pass
   return False

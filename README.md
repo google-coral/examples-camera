@@ -1,7 +1,7 @@
-# EdgeTPU simple camera examples
+# Edge TPU simple camera examples
 
 This repo contains a collection of examples that use camera streams
-together with the EdgeTPU Python API.
+together with the Edge TPU Python API.
 
 ## Installation
 
