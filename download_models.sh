@@ -13,4 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-wget http://storage.googleapis.com/cloud-iot-edge-pretrained-models/canned_models.tar.gz
+mkdir -p all_models
+wget https://dl.google.com/coral/canned_models/all_models.tar.gz
+tar -C all_models -xvzf all_models.tar.gz
+rm -f all_models.tar.gz

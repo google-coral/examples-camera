@@ -24,6 +24,6 @@ python3 classify_capture.py
 You can change the model and the labels file using flags:
 
 ```
-python3 classify_capture.py --model ../canned_models/inception_v3_299_quant_edgetpu.tflite
+python3 classify_capture.py --model ../all_models/inception_v3_299_quant_edgetpu.tflite
 
 ``` 

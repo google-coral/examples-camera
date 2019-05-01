@@ -59,7 +59,7 @@ def generate_svg(dwg, objs, labels, text_lines):
                         fill='red', fill_opacity=0.3, stroke='white'))
 
 def main():
-    default_model_dir = '../canned_models'
+    default_model_dir = '../all_models'
     default_model = 'mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite'
     default_labels = 'coco_labels.txt'
     parser = argparse.ArgumentParser()

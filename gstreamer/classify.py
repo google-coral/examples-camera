@@ -34,7 +34,7 @@ def generate_svg(dwg, text_lines):
       dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
 
 def main():
-    default_model_dir = "../canned_models"
+    default_model_dir = "../all_models"
     default_model = 'mobilenet_v2_1.0_224_quant_edgetpu.tflite'
     default_labels = 'imagenet_labels.txt'
     parser = argparse.ArgumentParser()

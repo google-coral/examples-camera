@@ -8,7 +8,7 @@ together with the Edge TPU Python API.
 Before you start using the examples run
 the ```download_models.sh``` script in order to download a selection of models.
 These canned models will be downloaded and extracted to a new folder
-```canned_models```.
+```all_models```.
 
 
 Further requirements may be needed by the different camera libraries, check the
