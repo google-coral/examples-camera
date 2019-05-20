@@ -13,3 +13,4 @@
 #    limitations under the License.
 
 sudo apt-get install -y gstreamer1.0-plugins-bad gstreamer1.0-plugins-good python3-gst-1.0 python3-gi 
+pip3 install svgwrite
