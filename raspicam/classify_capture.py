@@ -14,6 +14,7 @@
 
 """A demo to classify Raspberry Pi camera stream."""
 import argparse
+import os
 import io
 import time
 from collections import deque
@@ -33,7 +34,7 @@ def main():
                         default=os.path.join(default_model_dir, default_labels))
     args = parser.parse_args()
 
-    with open(args.label, 'r') as f:
+    with open(args.labels, 'r') as f:
         pairs = (l.strip().split(maxsplit=1) for l in f.readlines())
         labels = dict((int(k), v) for k, v in pairs)
 
