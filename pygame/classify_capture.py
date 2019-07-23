@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""A demo to classify Raspberry Pi camera stream."""
+"""A demo to classify Pygame camera stream."""
 import argparse
 import os
 import io
