@@ -41,9 +41,9 @@ def main():
                         default=os.path.join(default_model_dir,default_model))
     parser.add_argument('--labels', help='label file path',
                         default=os.path.join(default_model_dir, default_labels))
-    parser.add_argument('--top_k', type=int, default=3,
+    parser.add_argument('--top_k', type=int, default=5,
                         help='number of classes with highest score to display')
-    parser.add_argument('--threshold', type=float, default=0.1,
+    parser.add_argument('--threshold', type=float, default=0.5,
                         help='class score threshold')
     args = parser.parse_args()
 
@@ -76,7 +76,7 @@ def main():
             imagen = pygame.transform.scale(mysurface, (width, height))
             input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
             start_time = time.monotonic()
-            results = engine.DetectWithInputTensor(input, top_k=3)
+            results = engine.DetectWithInputTensor(input, threshold=args.threshold, top_k=args.top_k)
             stop_time = time.monotonic()
             inference_ms = (stop_time - start_time)*1000.0
             fps_ms = 1.0 / (stop_time - last_time)
@@ -89,7 +89,9 @@ def main():
                label = "%.0f%% %s" % (100*result.score, labels[result.label_id])
                text = font.render(label, True, color)
                mysurface.blit(text, (x0 * 640 , y0 * 480))
-            print(annotate_text)
+            text = font.render(annotate_text, True, color)
+            mysurface.blit(text, (0, 0))
+#            print(annotate_text)
             display.blit(mysurface, (0, 0))
             pygame.display.flip()
     finally:
