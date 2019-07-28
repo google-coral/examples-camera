@@ -12,14 +12,16 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""A demo to classify Raspberry Pi camera stream."""
+"""A demo to classify Pygame camera stream."""
 import argparse
 import os
 import io
 import time
 from collections import deque
 import numpy as np
-import picamera
+import pygame
+import pygame.camera
+from pygame.locals import *
 
 import edgetpu.classification.engine
 
@@ -40,34 +42,31 @@ def main():
 
     engine = edgetpu.classification.engine.ClassificationEngine(args.model)
 
-    with picamera.PiCamera() as camera:
-        camera.resolution = (640, 480)
-        camera.framerate = 30
-        camera.annotate_text_size = 20
-        _, width, height, channels = engine.get_input_tensor_shape()
-        camera.start_preview()
-        try:
-            stream = io.BytesIO()
-            fps = deque(maxlen=20)
+    pygame.init()
+    pygame.camera.init()
+    camlist = pygame.camera.list_cameras()
+
+    camera = pygame.camera.Camera(camlist[0], (640, 480)) 
+    _, width, height, channels = engine.get_input_tensor_shape()
+    camera.start()
+    try:
+        fps = deque(maxlen=20)
+        fps.append(time.time())
+        while True:
+            imagen = camera.get_image()
+            imagen = pygame.transform.scale(imagen, (width, height))
+            input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
+            start_ms = time.time()
+            results = engine.ClassifyWithInputTensor(input, top_k=3)
+            inference_ms = (time.time() - start_ms)*1000.0
             fps.append(time.time())
-            for foo in camera.capture_continuous(stream,
-                                                 format='rgb',
-                                                 use_video_port=True,
-                                                 resize=(width, height)):
-                stream.truncate()
-                stream.seek(0)
-                input = np.frombuffer(stream.getvalue(), dtype=np.uint8)
-                start_ms = time.time()
-                results = engine.ClassifyWithInputTensor(input, top_k=3)
-                inference_ms = (time.time() - start_ms)*1000.0
-                fps.append(time.time())
-                fps_ms = len(fps)/(fps[-1] - fps[0])
-                camera.annotate_text = "Inference: %5.2fms FPS: %3.1f" % (inference_ms, fps_ms)
-                for result in results:
-                   camera.annotate_text += "\n%.0f%% %s" % (100*result[1], labels[result[0]])
-                print(camera.annotate_text)
-        finally:
-            camera.stop_preview()
+            fps_ms = len(fps)/(fps[-1] - fps[0])
+            annotate_text = "Inference: %5.2fms FPS: %3.1f" % (inference_ms, fps_ms)
+            for result in results:
+               annotate_text += "\n%.0f%% %s" % (100*result[1], labels[result[0]])
+            print(annotate_text)
+    finally:
+        camera.stop()
 
 
 if __name__ == '__main__':
