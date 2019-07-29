@@ -22,6 +22,14 @@ README file for the respective subfolder.
     former two you will also need a Coral USB Accelerator to run the models.
   * __Raspicam__ Python example using picamera. This is only intended for
     Raspberry Pi and will require a Coral USB Accelerator.
+    Use ```install_requirements.sh``` to make sure all the dependencies are
+    present.
+  * __PyGame__ Python example using pygame to obtain camera frames.
+    Use ```install_requirements.sh``` to make sure all the dependencies are
+    present.
+  * __OpenCV__ Python example using OpenCV to obtain camera frames.
+    Use ```install_requirements.sh``` to make sure all the dependencies are
+    present.
 
 ## Canned models
 
