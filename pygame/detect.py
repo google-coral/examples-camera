@@ -33,6 +33,7 @@ def load_labels(path):
        return {int(num): text.strip() for num, text in lines}
 
 def main():
+    cam_w, cam_h = 640, 480
     default_model_dir = "../all_models"
     default_model = 'mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite'
     default_labels = 'coco_labels.txt'
@@ -62,18 +63,18 @@ def main():
     pygame.camera.init()
     camlist = pygame.camera.list_cameras()
 
-    camera = pygame.camera.Camera(camlist[0], (640, 480)) 
-    _, width, height, channels = engine.get_input_tensor_shape()
-    display = pygame.display.set_mode((640, 480), 0)
+    _, w, h, _ = engine.get_input_tensor_shape()
+    camera = pygame.camera.Camera(camlist[0], (cam_w, cam_h)) 
+    display = pygame.display.set_mode((cam_w, cam_h), 0)
 
-    color = pygame.Color(255, 0, 0)
+    red = pygame.Color(255, 0, 0)
 
     camera.start()
     try:
         last_time = time.monotonic()
         while True:
             mysurface = camera.get_image()
-            imagen = pygame.transform.scale(mysurface, (width, height))
+            imagen = pygame.transform.scale(mysurface, (w, h))
             input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
             start_time = time.monotonic()
             results = engine.DetectWithInputTensor(input, threshold=args.threshold, top_k=args.top_k)
@@ -84,14 +85,13 @@ def main():
             annotate_text = "Inference: %5.2fms FPS: %3.1f" % (inference_ms, fps_ms)
             for result in results:
                x0, y0, x1, y1 = result.bounding_box.flatten().tolist()
-               rect = pygame.Rect(x0 * 640, y0 * 480, (x1 - x0) * 640, (y1 - y0) * 480)
-               pygame.draw.rect(mysurface, color, rect, 1)
+               rect = pygame.Rect(x0 * cam_w, y0 * cam_h, (x1 - x0) * cam_w, (y1 - y0) * cam_h)
+               pygame.draw.rect(mysurface, red, rect, 1)
                label = "%.0f%% %s" % (100*result.score, labels[result.label_id])
-               text = font.render(label, True, color)
-               mysurface.blit(text, (x0 * 640 , y0 * 480))
-            text = font.render(annotate_text, True, color)
+               text = font.render(label, True, red)
+               mysurface.blit(text, (x0 * cam_w , y0 * cam_h))
+            text = font.render(annotate_text, True, red)
             mysurface.blit(text, (0, 0))
-#            print(annotate_text)
             display.blit(mysurface, (0, 0))
             pygame.display.flip()
     finally:
