@@ -12,7 +12,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 
-"""A demo to classify Pygame camera stream."""
+"""A demo to run the dector in a Pygame camera stream."""
 import argparse
 import os
 import io
