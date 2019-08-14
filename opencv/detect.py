@@ -89,15 +89,13 @@ def append_objs_to_img(cv2_im, objs, labels):
     height, width, channels = cv2_im.shape
     for obj in objs:
         x0, y0, x1, y1 = obj.bounding_box.flatten().tolist()
-        x, y, w, h = x0, y0, x1 - x0, y1 - y0
-        x, y, w, h = int(x * width), int(y * height), int(w * width), int(h * height)
+        x0, y0, x1, y1 = int(x0*width), int(y0*height), int(x1*width), int(y1*height)  
         percent = int(100 * obj.score)
         label = '%d%% %s' % (percent, labels[obj.label_id])
 
-        cv2_im = cv2.rectangle(cv2_im, (x, y), (w,h), (0, 255, 0), 3)
-        cv2_im = cv2.putText(cv2_im, label, (x, y+30), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), 3)
-
-
+        cv2_im = cv2.rectangle(cv2_im, (x0, y0), (x1, y1), (0, 255, 0), 2)
+        cv2_im = cv2.putText(cv2_im, label, (x0, y0+30), 
+                             cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), 2)
     return cv2_im
 
 
