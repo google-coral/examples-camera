@@ -13,87 +13,36 @@
 # limitations under the License.
 
 """A demo which runs object classification on camera frames."""
-import argparse
-import time
 import re
-import svgwrite
 import imp
 import os
-import cv2
 from edgetpu.classification.engine import ClassificationEngine
 import gstreamer
 import numpy
 import signal
+from .VideoConverter import *
 
-def load_labels(path):
-    p = re.compile(r'\s*(\d+)(.+)')
-    with open(path, 'r', encoding='utf-8') as f:
-       lines = (p.match(line).groups() for line in f.readlines())
-       return {int(num): text.strip() for num, text in lines}
+class Main:
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.sigint_handler)
+        self.video_converter = VideoConverter(output_path='./videos')
 
-def generate_svg(dwg, text_lines):
-    for y, line in enumerate(text_lines):
-        dwg.add(dwg.text(line, insert=(11, y*20+1), fill='black', font_size='20'))
-        dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
+    def _callback(self, image, svg_canvas):
+        # image.save('out.bmp')
+        self.video_converter.add_image(numpy.array(image))
 
-def sigint_handler(signum, frame):
-    stopVideo()
+    def sigint_handler(self, signum, frame):
+        self.video_converter.stop_video()
 
-video_name = 'video.mpg'
-video = cv2.VideoWriter(video_name,
-                        cv2.VideoWriter_fourcc('M','P','E','G'),
-                        30.0,
-                        (320, 240),
-                        True)
-signal.signal(signal.SIGINT, sigint_handler)
+    def start(self):
+        _ = gstreamer.run_pipeline(self._callback, appsink_size=(320, 240))
+        self.video_converter.stop_video()
 
-def stopVideo():
-    video.release()
-    print('Closed')
-    cv2.destroyAllWindows()
+
 
 def main():
-    default_model_dir = "../all_models"
-    default_model = 'mobilenet_v2_1.0_224_quant_edgetpu.tflite'
-    default_labels = 'imagenet_labels.txt'
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--model', help='.tflite model path',
-                        default=os.path.join(default_model_dir,default_model))
-    parser.add_argument('--labels', help='label file path',
-                        default=os.path.join(default_model_dir, default_labels))
-    parser.add_argument('--top_k', type=int, default=3,
-                        help='number of classes with highest score to display')
-    parser.add_argument('--threshold', type=float, default=0.1,
-                        help='class score threshold')
-    args = parser.parse_args()
-
-    last_time = time.monotonic()
-    def user_callback(image, svg_canvas):
-        nonlocal last_time
-        start_time = time.monotonic()
-        image.save('out.bmp')
-        #      print(image.size)
-        #open_cv_image = numpy.array(image.convert('RGB'))
-        open_cv_image = cv2.cvtColor(numpy.array(image), cv2.COLOR_RGB2BGR)
-        #cv2.imshow('frame', open_cv_image)
-
-        video.write(open_cv_image)
-        # print('of pic: ', open_cv_image, 'of initial pic: ', numpy.array(image))
-        #video.release()
-        #      results = engine.ClassifyWithImage(image, threshold=args.threshold, top_k=args.top_k)
-        end_time = time.monotonic()
-        text_lines = [
-          'Inference: %.2f ms' %((end_time - start_time) * 1000),
-          'FPS: %.2f fps' %(1.0/(end_time - last_time)),
-        ]
-        #      for index, score in results:
-        #        text_lines.append('score=%.2f: %s' % (score, labels[index]))
-        #      print(' '.join(text_lines))
-        last_time = end_time
-        generate_svg(svg_canvas, text_lines)
-
-    result = gstreamer.run_pipeline(user_callback, appsink_size=(320,240))
-    stopVideo()
+    mainObject = Main()
+    mainObject.start()
 
 if __name__ == '__main__':
     main()
