@@ -22,10 +22,10 @@ import numpy
 import signal
 
 try:
-    from .VideoConverter import *
+    from .VideoWriter import *
     from .FaceDetector import *
 except Exception: #ImportError
-    from VideoConverter import *
+    from VideoWriter import *
     from FaceDetector import *
 
 class CONSTANTS:
@@ -35,32 +35,35 @@ class CONSTANTS:
 class Main:
     def __init__(self):
         signal.signal(signal.SIGINT, self.sigint_handler)
-        self.video_converter = VideoConverter(output_path='./videos')
+        self.video_writer = VideoWriter(output_path='./videos')
         self.face_detector = FaceDetector(model_path='/home/mendel/cameraSamples/examples-camera/all_models/mobilenet_ssd_v2_face_quant_postprocess_edgetpu.tflite')
         self.last_face_seen_timestamp = 0
 
     def _callback(self, image, svg_canvas):
-        # image.save('out.bmp')
-        if self.video_converter.is_video_recording_in_progress():
-            self.video_converter.add_image(numpy.array(image))
+        face_rois_in_image = self.face_detector.predict(image)
 
-            if self.face_detector.check_image_contains_face(image):
+        if self.video_writer.is_video_recording_in_progress():
+            self.video_writer.add_image(numpy.array(image))
+
+            if len(face_rois_in_image) > 0:
                 self.last_face_seen_timestamp = time.time()
+                self.video_writer.save_image_at_same_path(numpy.array(image.crop(face_rois_in_image[0])))
 
             if time.time() - self.last_face_seen_timestamp >= CONSTANTS.NO_FACE_THRESHOLD_S:
-                self.video_converter.stop_video_recording()
+                self.video_writer.stop_video_recording()
                 self.last_face_seen_timestamp = 0
 
-        elif self.face_detector.check_image_contains_face(image):
+        elif len(face_rois_in_image) > 0:
             self.last_face_seen_timestamp = time.time()
-            self.video_converter.start_video_recording(numpy.array(image))
+            self.video_writer.start_video_recording(numpy.array(image))
+            self.video_writer.save_image_at_same_path(numpy.array(image.crop(face_rois_in_image[0])))
 
     def sigint_handler(self, signum, frame):
-        self.video_converter.stop_video_recording()
+        self.video_writer.stop_video_recording()
 
     def start(self):
         _ = gstreamer.run_pipeline(self._callback, appsink_size=(320, 240))
-        self.video_converter.stop_video_recording()
+        self.video_writer.stop_video_recording()
 
 
 def main():

@@ -6,7 +6,7 @@ from datetime import datetime
 import time
 
 
-class VideoConverter:
+class VideoWriter:
     def __init__(self, output_path: str = './videos', fps: float = 30.0, max_video_len_s: int = 60):
         if not os.path.exists(output_path):
             os.mkdir(output_path)
@@ -23,7 +23,12 @@ class VideoConverter:
 
         if self.video_writer is None:
             date_name = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-            self.video_name = os.path.join(self.output_path, "video_" + date_name + ".mpg")
+
+            video_path = os.path.join(self.output_path, date_name)
+            if not os.path.exists(video_path):
+                os.mkdir(video_path)
+
+            self.video_name = os.path.join(video_path, "video.mpg")
             self.video_writer = cv2.VideoWriter(self.video_name,
                                                 cv2.VideoWriter_fourcc('M', 'P', 'E', 'G'),
                                                 self.fps,
@@ -55,6 +60,10 @@ class VideoConverter:
     def is_video_recording_in_progress(self) -> bool:
         return self.video_writer is not None
 
+    def save_image_at_same_path(self, image: np.array):
+        open_cv_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        img_path = os.path.join(os.path.dirname(self.video_name), datetime.now().strftime("%d-%m-%Y_%H-%M-%S") + ".png")
+        cv2.imwrite(img_path, open_cv_image)
 
 
 
