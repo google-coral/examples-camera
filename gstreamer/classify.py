@@ -20,16 +20,19 @@ from edgetpu.classification.engine import ClassificationEngine
 import gstreamer
 import numpy
 import signal
-from .VideoConverter import *
+from VideoConverter import *
+from FaceDetector import *
 
 class Main:
     def __init__(self):
         signal.signal(signal.SIGINT, self.sigint_handler)
         self.video_converter = VideoConverter(output_path='./videos')
+        self.face_detector = FaceDetector(model_path='/home/mendel/cameraSamples/examples-camera/all_models/mobilenet_ssd_v2_face_quant_postprocess_edgetpu.tflite')
 
     def _callback(self, image, svg_canvas):
         # image.save('out.bmp')
-        self.video_converter.add_image(numpy.array(image))
+        if self.face_detector.check_image_contains_face(image):
+            self.video_converter.add_image(numpy.array(image))
 
     def sigint_handler(self, signum, frame):
         self.video_converter.stop_video()
