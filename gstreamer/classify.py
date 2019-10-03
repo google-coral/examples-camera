@@ -51,11 +51,15 @@ def main():
     engine = ClassificationEngine(args.model)
     labels = load_labels(args.labels)
 
+    input_shape = engine.get_input_tensor_shape()
+    inference_size = (input_shape[1], input_shape[2])
+
     last_time = time.monotonic()
-    def user_callback(image, svg_canvas):
+    def user_callback(input_tensor, svg_canvas):
       nonlocal last_time
       start_time = time.monotonic()
-      results = engine.ClassifyWithImage(image, threshold=args.threshold, top_k=args.top_k)
+      results = engine.classify_with_input_tensor(input_tensor,
+          threshold=args.threshold, top_k=args.top_k)
       end_time = time.monotonic()
       text_lines = [
           'Inference: %.2f ms' %((end_time - start_time) * 1000),
@@ -67,7 +71,7 @@ def main():
       last_time = end_time
       generate_svg(svg_canvas, text_lines)
 
-    result = gstreamer.run_pipeline(user_callback)
+    result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
 
 if __name__ == '__main__':
     main()

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import numpy
 import sys
 from functools import partial
 import svgwrite
@@ -43,9 +44,9 @@ def on_new_sample(sink, overlay, screen_size, appsink_size, user_function):
     buf = sample.get_buffer()
     result, mapinfo = buf.map(Gst.MapFlags.READ)
     if result:
-      img = Image.frombytes('RGB', (appsink_size[0], appsink_size[1]), mapinfo.data, 'raw')
       svg_canvas = svgwrite.Drawing('', size=(screen_size[0], screen_size[1]))
-      user_function(img, svg_canvas)
+      input_tensor = numpy.frombuffer(mapinfo.data, dtype=numpy.uint8)
+      user_function(input_tensor, svg_canvas)
       overlay.set_property('data', svg_canvas.tostring())
     buf.unmap(mapinfo)
     return Gst.FlowReturn.OK
