@@ -43,8 +43,10 @@ def shadow_text(dwg, x, y, text, font_size=20):
     dwg.add(dwg.text(text, insert=(x+1, y+1), fill='black', font_size=font_size))
     dwg.add(dwg.text(text, insert=(x, y), fill='white', font_size=font_size))
 
-def generate_svg(dwg, objs, labels, text_lines):
-    width, height = dwg.attribs['width'], dwg.attribs['height']
+def generate_svg(size, objs, labels, text_lines):
+    width, height = size
+    dwg = svgwrite.Drawing('', size=size)
+
     for y, line in enumerate(text_lines):
         shadow_text(dwg, 10, y*20, line)
     for obj in objs:
@@ -56,6 +58,7 @@ def generate_svg(dwg, objs, labels, text_lines):
         shadow_text(dwg, x, y - 5, label)
         dwg.add(dwg.rect(insert=(x,y), size=(w, h),
                         fill='red', fill_opacity=0.3, stroke='white'))
+    return dwg.tostring()
 
 def main():
     default_model_dir = '../all_models'
@@ -80,7 +83,7 @@ def main():
     inference_size = (input_shape[1], input_shape[2])
 
     last_time = time.monotonic()
-    def user_callback(input_tensor, svg_canvas):
+    def user_callback(input_tensor, src_size):
       nonlocal last_time
       start_time = time.monotonic()
       objs = engine.detect_with_input_tensor(input_tensor,
@@ -93,7 +96,7 @@ def main():
       ]
       print(' '.join(text_lines))
       last_time = end_time
-      generate_svg(svg_canvas, objs, labels, text_lines)
+      return generate_svg(src_size, objs, labels, text_lines)
 
     result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
 

@@ -27,10 +27,12 @@ def load_labels(path):
        lines = (p.match(line).groups() for line in f.readlines())
        return {int(num): text.strip() for num, text in lines}
 
-def generate_svg(dwg, text_lines):
+def generate_svg(size, text_lines):
+    dwg = svgwrite.Drawing('', size=size)
     for y, line in enumerate(text_lines):
       dwg.add(dwg.text(line, insert=(11, y*20+1), fill='black', font_size='20'))
       dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
+    return dwg.tostring()
 
 def main():
     default_model_dir = "../all_models"
@@ -55,7 +57,7 @@ def main():
     inference_size = (input_shape[1], input_shape[2])
 
     last_time = time.monotonic()
-    def user_callback(input_tensor, svg_canvas):
+    def user_callback(input_tensor, src_size):
       nonlocal last_time
       start_time = time.monotonic()
       results = engine.classify_with_input_tensor(input_tensor,
@@ -69,7 +71,7 @@ def main():
         text_lines.append('score=%.2f: %s' % (score, labels[index]))
       print(' '.join(text_lines))
       last_time = end_time
-      generate_svg(svg_canvas, text_lines)
+      return generate_svg(src_size, text_lines)
 
     result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
 

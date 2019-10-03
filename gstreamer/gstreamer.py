@@ -14,42 +14,100 @@
 
 import numpy
 import sys
-from functools import partial
 import svgwrite
+import threading
 
 import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GstBase', '1.0')
 from gi.repository import GLib, GObject, Gst, GstBase
-from PIL import Image
 
 GObject.threads_init()
 Gst.init(None)
 
-def on_bus_message(bus, message, loop):
-    t = message.type
-    if t == Gst.MessageType.EOS:
-        loop.quit()
-    elif t == Gst.MessageType.WARNING:
-        err, debug = message.parse_warning()
-        sys.stderr.write('Warning: %s: %s\n' % (err, debug))
-    elif t == Gst.MessageType.ERROR:
-        err, debug = message.parse_error()
-        sys.stderr.write('Error: %s: %s\n' % (err, debug))
-        loop.quit()
-    return True
+class GstPipeline:
+    def __init__(self, pipeline, user_function, src_size):
+        self.user_function = user_function
+        self.running = False
+        self.gstbuffer = None
+        self.src_size = src_size
+        self.condition = threading.Condition()
+        self.loop = GObject.MainLoop()
 
-def on_new_sample(sink, overlay, screen_size, appsink_size, user_function):
-    sample = sink.emit('pull-sample')
-    buf = sample.get_buffer()
-    result, mapinfo = buf.map(Gst.MapFlags.READ)
-    if result:
-      svg_canvas = svgwrite.Drawing('', size=(screen_size[0], screen_size[1]))
-      input_tensor = numpy.frombuffer(mapinfo.data, dtype=numpy.uint8)
-      user_function(input_tensor, svg_canvas)
-      overlay.set_property('data', svg_canvas.tostring())
-    buf.unmap(mapinfo)
-    return Gst.FlowReturn.OK
+        self.pipeline = Gst.parse_launch(pipeline)
+        self.overlay = self.pipeline.get_by_name('overlay')
+        self.overlaysink = self.pipeline.get_by_name('overlaysink')
+        appsink = self.pipeline.get_by_name('appsink')
+        appsink.connect('new-sample', self.on_new_sample)
+
+        # Set up a pipeline bus watch to catch errors.
+        bus = self.pipeline.get_bus()
+        bus.add_signal_watch()
+        bus.connect('message', self.on_bus_message)
+
+
+    def run(self):
+        # Start inference worker.
+        self.running = True
+        worker = threading.Thread(target=self.inference_loop)
+        worker.start()
+
+        # Run pipeline.
+        self.pipeline.set_state(Gst.State.PLAYING)
+        try:
+            self.loop.run()
+        except:
+            pass
+
+        # Clean up.
+        self.pipeline.set_state(Gst.State.NULL)
+        while GLib.MainContext.default().iteration(False):
+            pass
+        with self.condition:
+            self.running = False
+            self.condition.notify_all()
+        worker.join()
+
+    def on_bus_message(self, bus, message):
+        t = message.type
+        if t == Gst.MessageType.EOS:
+            self.loop.quit()
+        elif t == Gst.MessageType.WARNING:
+            err, debug = message.parse_warning()
+            sys.stderr.write('Warning: %s: %s\n' % (err, debug))
+        elif t == Gst.MessageType.ERROR:
+            err, debug = message.parse_error()
+            sys.stderr.write('Error: %s: %s\n' % (err, debug))
+            self.loop.quit()
+        return True
+
+    def on_new_sample(self, sink):
+        sample = sink.emit('pull-sample')
+        with self.condition:
+            self.gstbuffer = sample.get_buffer()
+            self.condition.notify_all()
+        return Gst.FlowReturn.OK
+
+    def inference_loop(self):
+        while True:
+            with self.condition:
+                while not self.gstbuffer and self.running:
+                    self.condition.wait()
+                if not self.running:
+                    break
+                gstbuffer = self.gstbuffer
+                self.gstbuffer = None
+
+            result, mapinfo = gstbuffer.map(Gst.MapFlags.READ)
+            if result:
+              input_tensor = numpy.frombuffer(mapinfo.data, dtype=numpy.uint8)
+              svg = self.user_function(input_tensor, self.src_size)
+              if svg:
+                if self.overlay:
+                    self.overlay.set_property('data', svg)
+                if self.overlaysink:
+                    self.overlaysink.set_property('svg', svg)
+            gstbuffer.unmap(mapinfo)
 
 def detectCoralDevBoard():
   try:
@@ -59,61 +117,33 @@ def detectCoralDevBoard():
   except: pass
   return False
 
-def run_pipeline(user_function,
-                 src_size=(640,480),
-                 appsink_size=(320, 180)):
-    PIPELINE = 'v4l2src device=/dev/video0 ! {src_caps} ! {leaky_q} '
+def run_pipeline(user_function, appsink_size):
+    PIPELINE = 'v4l2src device=/dev/video0 ! {src_caps}'
+    SRC_CAPS = 'video/x-raw,width={width},height={height},framerate=30/1'
+    src_size = (640, 480)
     if detectCoralDevBoard():
-        SRC_CAPS = 'video/x-raw,format=YUY2,width={width},height={height},framerate=30/1'
         PIPELINE += """ ! glupload ! tee name=t
-            t. ! {leaky_q} ! glfilterbin filter=glcolorscale
-               ! {dl_caps} ! videoconvert ! {sink_caps} ! {sink_element}
-            t. ! {leaky_q} ! glfilterbin filter=glcolorscale
-               ! rsvgoverlay name=overlay ! waylandsink
+            t. ! queue ! glbox ! gldownload ! {sink_caps} ! {sink_element}
+            t. ! queue ! glsvgoverlaysink name=overlaysink
         """
     else:
-        SRC_CAPS = 'video/x-raw,width={width},height={height},framerate=30/1'
         PIPELINE += """ ! tee name=t
             t. ! {leaky_q} ! videoconvert ! videoscale ! {sink_caps} ! {sink_element}
             t. ! {leaky_q} ! videoconvert
-               ! rsvgoverlay name=overlay ! videoconvert ! ximagesink
+               ! rsvgoverlay name=overlay ! videoconvert ! ximagesink sync=false
             """
 
-    SINK_ELEMENT = 'appsink name=appsink sync=false emit-signals=true max-buffers=1 drop=true'
-    DL_CAPS = 'video/x-raw,format=RGBA,width={width},height={height}'
+    SINK_ELEMENT = 'appsink name=appsink emit-signals=true max-buffers=1 drop=true'
     SINK_CAPS = 'video/x-raw,format=RGB,width={width},height={height}'
     LEAKY_Q = 'queue max-size-buffers=1 leaky=downstream'
 
     src_caps = SRC_CAPS.format(width=src_size[0], height=src_size[1])
-    dl_caps = DL_CAPS.format(width=appsink_size[0], height=appsink_size[1])
     sink_caps = SINK_CAPS.format(width=appsink_size[0], height=appsink_size[1])
     pipeline = PIPELINE.format(leaky_q=LEAKY_Q,
-        src_caps=src_caps, dl_caps=dl_caps, sink_caps=sink_caps,
+        src_caps=src_caps, sink_caps=sink_caps,
         sink_element=SINK_ELEMENT)
 
-    print('Gstreamer pipeline: ', pipeline)
-    pipeline = Gst.parse_launch(pipeline)
+    print('Gstreamer pipeline:\n', pipeline)
 
-    overlay = pipeline.get_by_name('overlay')
-    appsink = pipeline.get_by_name('appsink')
-    appsink.connect('new-sample', partial(on_new_sample,
-        overlay=overlay, screen_size = src_size,
-        appsink_size=appsink_size, user_function=user_function))
-    loop = GObject.MainLoop()
-
-    # Set up a pipeline bus watch to catch errors.
-    bus = pipeline.get_bus()
-    bus.add_signal_watch()
-    bus.connect('message', on_bus_message, loop)
-
-    # Run pipeline.
-    pipeline.set_state(Gst.State.PLAYING)
-    try:
-        loop.run()
-    except:
-        pass
-
-    # Clean up.
-    pipeline.set_state(Gst.State.NULL)
-    while GLib.MainContext.default().iteration(False):
-        pass
+    pipeline = GstPipeline(pipeline, user_function, src_size)
+    pipeline.run()
