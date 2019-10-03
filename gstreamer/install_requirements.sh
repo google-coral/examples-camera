@@ -17,7 +17,6 @@ if grep -s -q "MX8MQ" /sys/firmware/devicetree/base/model; then
   echo "Installing DevBoard specific dependencies"
   sudo apt-get install python3-pip
   sudo pip3 install svgwrite
-  sudo pip3 install python-periphery 
 else
   # Install gstreamer 
   sudo apt-get install -y gstreamer1.0-plugins-bad gstreamer1.0-plugins-good python3-gst-1.0 python3-gi

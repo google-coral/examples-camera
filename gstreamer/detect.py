@@ -29,7 +29,6 @@ import argparse
 import time
 import re
 import svgwrite
-import imp
 import os
 from edgetpu.detection.engine import DetectionEngine
 import gstreamer
