@@ -20,7 +20,8 @@ import threading
 import gi
 gi.require_version('Gst', '1.0')
 gi.require_version('GstBase', '1.0')
-from gi.repository import GLib, GObject, Gst, GstBase
+gi.require_version('Gtk', '3.0')
+from gi.repository import GLib, GObject, Gst, GstBase, Gtk
 
 GObject.threads_init()
 Gst.init(None)
@@ -34,7 +35,6 @@ class GstPipeline:
         self.src_size = src_size
         self.box = None
         self.condition = threading.Condition()
-        self.loop = GObject.MainLoop()
 
         self.pipeline = Gst.parse_launch(pipeline)
         self.overlay = self.pipeline.get_by_name('overlay')
@@ -57,7 +57,7 @@ class GstPipeline:
         # Run pipeline.
         self.pipeline.set_state(Gst.State.PLAYING)
         try:
-            self.loop.run()
+            Gtk.main()
         except:
             pass
 
@@ -73,14 +73,14 @@ class GstPipeline:
     def on_bus_message(self, bus, message):
         t = message.type
         if t == Gst.MessageType.EOS:
-            self.loop.quit()
+            Gtk.main_quit()
         elif t == Gst.MessageType.WARNING:
             err, debug = message.parse_warning()
             sys.stderr.write('Warning: %s: %s\n' % (err, debug))
         elif t == Gst.MessageType.ERROR:
             err, debug = message.parse_error()
             sys.stderr.write('Error: %s: %s\n' % (err, debug))
-            self.loop.quit()
+            Gtk.main_quit()
         return True
 
     def on_new_sample(self, sink):
