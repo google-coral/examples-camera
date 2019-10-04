@@ -31,6 +31,7 @@ import re
 import svgwrite
 import os
 from edgetpu.detection.engine import DetectionEngine
+import common
 import gstreamer
 
 def load_labels(path):
@@ -91,20 +92,22 @@ def main():
     input_shape = engine.get_input_tensor_shape()
     inference_size = (input_shape[1], input_shape[2])
 
-    last_time = time.monotonic()
+    # Average fps over last 30 frames.
+    fps_counter  = common.avg_fps_counter(30)
+
     def user_callback(input_tensor, src_size, inference_box):
-      nonlocal last_time
+      nonlocal fps_counter
       start_time = time.monotonic()
       objs = engine.detect_with_input_tensor(input_tensor,
                                     threshold=args.threshold,
                                     top_k=args.top_k)
       end_time = time.monotonic()
+
       text_lines = [
           'Inference: %.2f ms' %((end_time - start_time) * 1000),
-          'FPS: %.2f fps' %(1.0/(end_time - last_time)),
+          'FPS: %d fps' % (round(next(fps_counter))),
       ]
       print(' '.join(text_lines))
-      last_time = end_time
       return generate_svg(src_size, inference_size, inference_box, objs, labels, text_lines)
 
     result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
