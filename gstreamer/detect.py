@@ -43,16 +43,25 @@ def shadow_text(dwg, x, y, text, font_size=20):
     dwg.add(dwg.text(text, insert=(x+1, y+1), fill='black', font_size=font_size))
     dwg.add(dwg.text(text, insert=(x, y), fill='white', font_size=font_size))
 
-def generate_svg(size, objs, labels, text_lines):
-    width, height = size
-    dwg = svgwrite.Drawing('', size=size)
+def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lines):
+    dwg = svgwrite.Drawing('', size=src_size)
+    src_w, src_h = src_size
+    inf_w, inf_h = inference_size
+    box_x, box_y, box_w, box_h = inference_box
+    scale_x, scale_y = src_w / box_w, src_h / box_h
 
     for y, line in enumerate(text_lines):
         shadow_text(dwg, 10, y*20, line)
     for obj in objs:
         x0, y0, x1, y1 = obj.bounding_box.flatten().tolist()
+        # Relative coordinates.
         x, y, w, h = x0, y0, x1 - x0, y1 - y0
-        x, y, w, h = int(x * width), int(y * height), int(w * width), int(h * height)
+        # Absolute coordinates, input tensor space.
+        x, y, w, h = int(x * inf_w), int(y * inf_h), int(w * inf_w), int(h * inf_h)
+        # Subtract boxing offset.
+        x, y = x - box_x, y - box_y
+        # Scale to source coordinate space.
+        x, y, w, h = x * scale_x, y * scale_y, w * scale_x, h * scale_y
         percent = int(100 * obj.score)
         label = '%d%% %s' % (percent, labels[obj.label_id])
         shadow_text(dwg, x, y - 5, label)
@@ -83,7 +92,7 @@ def main():
     inference_size = (input_shape[1], input_shape[2])
 
     last_time = time.monotonic()
-    def user_callback(input_tensor, src_size):
+    def user_callback(input_tensor, src_size, inference_box):
       nonlocal last_time
       start_time = time.monotonic()
       objs = engine.detect_with_input_tensor(input_tensor,
@@ -96,7 +105,7 @@ def main():
       ]
       print(' '.join(text_lines))
       last_time = end_time
-      return generate_svg(src_size, objs, labels, text_lines)
+      return generate_svg(src_size, inference_size, inference_box, objs, labels, text_lines)
 
     result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
 

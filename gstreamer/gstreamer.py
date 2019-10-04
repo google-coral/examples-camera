@@ -30,7 +30,9 @@ class GstPipeline:
         self.user_function = user_function
         self.running = False
         self.gstbuffer = None
+        self.sink_size = None
         self.src_size = src_size
+        self.box = None
         self.condition = threading.Condition()
         self.loop = GObject.MainLoop()
 
@@ -83,10 +85,28 @@ class GstPipeline:
 
     def on_new_sample(self, sink):
         sample = sink.emit('pull-sample')
+        if not self.sink_size:
+            s = sample.get_caps().get_structure(0)
+            self.sink_size = (s.get_value('width'), s.get_value('height'))
         with self.condition:
             self.gstbuffer = sample.get_buffer()
             self.condition.notify_all()
         return Gst.FlowReturn.OK
+
+    def get_box(self):
+        if not self.box:
+            glbox = self.pipeline.get_by_name('glbox')
+            box = self.pipeline.get_by_name('box')
+            assert glbox or box
+            assert self.sink_size
+            if glbox:
+                self.box = (glbox.get_property('x'), glbox.get_property('y'),
+                        glbox.get_property('width'), glbox.get_property('height'))
+            else:
+                self.box = (-box.get_property('left'), -box.get_property('top'),
+                    self.sink_size[0] + box.get_property('left') + box.get_property('right'),
+                    self.sink_size[1] + box.get_property('top') + box.get_property('bottom'))
+        return self.box
 
     def inference_loop(self):
         while True:
@@ -101,7 +121,7 @@ class GstPipeline:
             result, mapinfo = gstbuffer.map(Gst.MapFlags.READ)
             if result:
               input_tensor = numpy.frombuffer(mapinfo.data, dtype=numpy.uint8)
-              svg = self.user_function(input_tensor, self.src_size)
+              svg = self.user_function(input_tensor, self.src_size, self.get_box())
               if svg:
                 if self.overlay:
                     self.overlay.set_property('data', svg)
@@ -122,13 +142,18 @@ def run_pipeline(user_function, appsink_size):
     SRC_CAPS = 'video/x-raw,width={width},height={height},framerate=30/1'
     src_size = (640, 480)
     if detectCoralDevBoard():
+        scale_caps = None
         PIPELINE += """ ! glupload ! tee name=t
-            t. ! queue ! glbox ! gldownload ! {sink_caps} ! {sink_element}
+            t. ! queue ! glbox name=glbox ! gldownload ! {sink_caps} ! {sink_element}
             t. ! queue ! glsvgoverlaysink name=overlaysink
         """
     else:
+        scale = min(appsink_size[0] / src_size[0], appsink_size[1] / src_size[1])
+        scale = tuple(int(x * scale) for x in src_size)
+        scale_caps = 'video/x-raw,width={width},height={height}'.format(width=scale[0], height=scale[1])
         PIPELINE += """ ! tee name=t
-            t. ! {leaky_q} ! videoconvert ! videoscale ! {sink_caps} ! {sink_element}
+            t. ! {leaky_q} ! videoconvert ! videoscale ! {scale_caps} ! videobox name=box autocrop=true
+               ! {sink_caps} ! {sink_element}
             t. ! {leaky_q} ! videoconvert
                ! rsvgoverlay name=overlay ! videoconvert ! ximagesink sync=false
             """
@@ -141,7 +166,7 @@ def run_pipeline(user_function, appsink_size):
     sink_caps = SINK_CAPS.format(width=appsink_size[0], height=appsink_size[1])
     pipeline = PIPELINE.format(leaky_q=LEAKY_Q,
         src_caps=src_caps, sink_caps=sink_caps,
-        sink_element=SINK_ELEMENT)
+        sink_element=SINK_ELEMENT, scale_caps=scale_caps)
 
     print('Gstreamer pipeline:\n', pipeline)
 

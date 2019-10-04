@@ -57,7 +57,7 @@ def main():
     inference_size = (input_shape[1], input_shape[2])
 
     last_time = time.monotonic()
-    def user_callback(input_tensor, src_size):
+    def user_callback(input_tensor, src_size, inference_box):
       nonlocal last_time
       start_time = time.monotonic()
       results = engine.classify_with_input_tensor(input_tensor,
