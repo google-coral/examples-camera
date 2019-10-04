@@ -66,7 +66,7 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
         label = '%d%% %s' % (percent, labels[obj.label_id])
         shadow_text(dwg, x, y - 5, label)
         dwg.add(dwg.rect(insert=(x,y), size=(w, h),
-                        fill='red', fill_opacity=0.3, stroke='white'))
+                        fill='none', stroke='red', stroke_width='2'))
     return dwg.tostring()
 
 def main():
