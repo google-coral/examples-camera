@@ -50,7 +50,7 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
     box_x, box_y, box_w, box_h = inference_box
     scale_x, scale_y = src_w / box_w, src_h / box_h
 
-    for y, line in enumerate(text_lines):
+    for y, line in enumerate(text_lines, start=1):
         shadow_text(dwg, 10, y*20, line)
     for obj in objs:
         x0, y0, x1, y1 = obj.bounding_box.flatten().tolist()

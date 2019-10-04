@@ -29,7 +29,7 @@ def load_labels(path):
 
 def generate_svg(size, text_lines):
     dwg = svgwrite.Drawing('', size=size)
-    for y, line in enumerate(text_lines):
+    for y, line in enumerate(text_lines, start=1):
       dwg.add(dwg.text(line, insert=(11, y*20+1), fill='black', font_size='20'))
       dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
     return dwg.tostring()
