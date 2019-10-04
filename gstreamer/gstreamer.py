@@ -201,9 +201,9 @@ def detectCoralDevBoard():
 def run_pipeline(user_function, appsink_size):
     PIPELINE = 'v4l2src device=/dev/video0 ! {src_caps}'
     SRC_CAPS = 'video/x-raw,width={width},height={height},framerate=30/1'
-    src_size = (640, 480)
     if detectCoralDevBoard():
         scale_caps = None
+        src_size = (1920, 1080)
         PIPELINE += """ ! glupload ! tee name=t
             t. ! queue ! glbox name=glbox ! gldownload ! {sink_caps} ! {sink_element}
             t. ! queue ! glsvgoverlaysink name=overlaysink
@@ -212,6 +212,7 @@ def run_pipeline(user_function, appsink_size):
         scale = min(appsink_size[0] / src_size[0], appsink_size[1] / src_size[1])
         scale = tuple(int(x * scale) for x in src_size)
         scale_caps = 'video/x-raw,width={width},height={height}'.format(width=scale[0], height=scale[1])
+        src_size = (640, 480)
         PIPELINE += """ ! tee name=t
             t. ! {leaky_q} ! videoconvert ! videoscale ! {scale_caps} ! videobox name=box autocrop=true
                ! {sink_caps} ! {sink_element}
