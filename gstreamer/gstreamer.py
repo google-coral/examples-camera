@@ -98,6 +98,8 @@ class GstPipeline:
     def get_box(self):
         if not self.box:
             glbox = self.pipeline.get_by_name('glbox')
+            if glbox:
+                glbox = glbox.get_by_name('filter')
             box = self.pipeline.get_by_name('box')
             assert glbox or box
             assert self.sink_size
@@ -205,7 +207,7 @@ def run_pipeline(user_function, appsink_size):
         scale_caps = None
         src_size = (1920, 1080)
         PIPELINE += """ ! glupload ! tee name=t
-            t. ! queue ! glbox name=glbox ! gldownload ! {sink_caps} ! {sink_element}
+            t. ! queue ! glfilterbin filter=glbox name=glbox ! {sink_caps} ! {sink_element}
             t. ! queue ! glsvgoverlaysink name=overlaysink
         """
     else:
