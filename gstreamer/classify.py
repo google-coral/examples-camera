@@ -21,7 +21,7 @@ import gstreamer
 import numpy
 import signal
 from PIL import Image
-from types import Tuple, Union
+from typing import Tuple, Union
 
 try:
     from .VideoWriter import *
@@ -53,12 +53,12 @@ class Main:
         self.face_detector = FaceDetector(model_path='/home/mendel/mnt/cameraSamples/examples-camera/all_models/mobilenet_ssd_v2_face_quant_postprocess_edgetpu.tflite')
 
         self.who = None
-        self.counter: int = 0
-        self.counter_up_down: bool = False  # on off switch. False for human not visible (thus-down). True for face up.
+        self.counter = 0
+        self.counter_up_down = False  # on off switch. False for human not visible (thus-down). True for face up.
         self.counting_prev_face_seen_timestamp = 0
 
     def _record(self, image, face_rois_in_image: List[List[int]]) -> Tuple[CONSTANTS.RECORD_STATUS, Union[None, str]]:
-        seeing_a_face: bool = len(face_rois_in_image) > 0
+        seeing_a_face = len(face_rois_in_image) > 0
 
         if self.video_writer.is_video_recording_in_progress():
             self.video_writer.add_image(numpy.array(image))
@@ -84,7 +84,7 @@ class Main:
         return CONSTANTS.RECORD_STATUS.OFF, None
 
     def _count(self, face_rois_in_image: List[List[int]]) -> int:
-        seeing_a_face: bool = len(face_rois_in_image) > 0
+        seeing_a_face = len(face_rois_in_image) > 0
 
         # if seeing a face and was not seeing a face before
         if seeing_a_face and not self.counter_up_down:
@@ -107,7 +107,7 @@ class Main:
     def _save(self, who: str, pullup_counts: int, evidence_path: str):
         with open(CONSTANTS.SAVE_FILE_NAME, "a+") as track_file:
             # when,who,how_many,evidence
-            track_file.write(f'{time.time()},{who},{pullup_counts},{evidence_path}')
+            track_file.write('{},{},{},{}\n'.format(time.time(), who, pullup_counts, evidence_path))
 
     def _reset_session(self):
         self.counter = 0
