@@ -46,8 +46,12 @@ class CONSTANTS:
 
 class Main:
     def __init__(self):
+        # self.t0 = time.time()  # timer used for debugging the video's fps
         signal.signal(signal.SIGINT, self.sigint_handler)
-        self.video_writer = VideoWriter(output_path='/home/mendel/mnt/resources/videos')
+        # reduce the video fps since the Coral's processing slows down the counting
+        # POSSIBLE alternative solution: first save the videos, nightly - process them.
+        self.video_writer = VideoWriter(output_path='/home/mendel/mnt/resources/videos',
+                                        fps=15.0)
         self.recording_last_face_seen_timestamp = 0
 
         self.face_detector = FaceDetector(model_path='/home/mendel/mnt/cameraSamples/examples-camera/all_models/mobilenet_ssd_v2_face_quant_postprocess_edgetpu.tflite')
@@ -57,10 +61,12 @@ class Main:
         self.counter_up_down = False  # on off switch. False for human not visible (thus-down). True for face up.
         self.counting_prev_face_seen_timestamp = 0
 
-    def _record(self, image, face_rois_in_image: List[List[int]]) -> Tuple[CONSTANTS.RECORD_STATUS, Union[None, str]]:
+    def _record(self, image, face_rois_in_image: List[List[int]], current_count: int) -> Tuple[CONSTANTS.RECORD_STATUS, Union[None, str]]:
         seeing_a_face = len(face_rois_in_image) > 0
 
         if self.video_writer.is_video_recording_in_progress():
+            # print("{}".format(time.time() - self.t0))  # timer used for debugging the video's fps
+            # self.t0 = time.time()  # timer used for debugging the video's fps
             self.video_writer.add_image(numpy.array(image))
 
             if time.time() - self.recording_last_face_seen_timestamp >= CONSTANTS.NO_FACE_THRESHOLD_SEC:
@@ -116,8 +122,11 @@ class Main:
     def _callback(self, image, svg_canvas):
         face_rois_in_image = self.face_detector.predict(image)
 
-        record_status, video_path = self._record(image=image, face_rois_in_image=face_rois_in_image)
         counts = self._count(face_rois_in_image=face_rois_in_image)
+        record_status, video_path = self._record(image=image,
+                                                 face_rois_in_image=face_rois_in_image,
+                                                 current_count=counts)
+
         if len(face_rois_in_image) > 0:
             # TODO: ENSEMBLE predictions eventually
             self.who = self._whothis(image_of_face=image.crop(face_rois_in_image[0]))
