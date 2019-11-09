@@ -21,6 +21,7 @@ import gstreamer
 import numpy
 import signal
 from PIL import Image
+from PIL import ImageDraw, ImageFont
 from typing import Tuple, Union
 
 try:
@@ -61,7 +62,7 @@ class Main:
         self.counter_up_down = False  # on off switch. False for human not visible (thus-down). True for face up.
         self.counting_prev_face_seen_timestamp = 0
 
-    def _record(self, image, face_rois_in_image: List[List[int]], current_count: int) -> Tuple[CONSTANTS.RECORD_STATUS, Union[None, str]]:
+    def _record(self, image, face_rois_in_image: List[List[int]]) -> Tuple[CONSTANTS.RECORD_STATUS, Union[None, str]]:
         seeing_a_face = len(face_rois_in_image) > 0
 
         if self.video_writer.is_video_recording_in_progress():
@@ -110,6 +111,12 @@ class Main:
     def _whothis(self, image_of_face: Image) -> str:
         return "Octav"
 
+    def _write_number_on_photo(self, image: Image, number: int):
+        ImageDraw.Draw(image).text((10, 8),
+                                   text=str(number),
+                                   fill=(255, 0, 0),
+                                   font=ImageFont.truetype(font="OpenSans.ttf", size=24))
+
     def _save(self, who: str, pullup_counts: int, evidence_path: str):
         with open(CONSTANTS.SAVE_FILE_NAME, "a+") as track_file:
             # when,who,how_many,evidence
@@ -123,9 +130,10 @@ class Main:
         face_rois_in_image = self.face_detector.predict(image)
 
         counts = self._count(face_rois_in_image=face_rois_in_image)
+        self._write_number_on_photo(image, number=counts)
+
         record_status, video_path = self._record(image=image,
-                                                 face_rois_in_image=face_rois_in_image,
-                                                 current_count=counts)
+                                                 face_rois_in_image=face_rois_in_image)
 
         if len(face_rois_in_image) > 0:
             # TODO: ENSEMBLE predictions eventually
