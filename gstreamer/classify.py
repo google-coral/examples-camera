@@ -123,7 +123,9 @@ class Main:
             self.who = self._whothis(image_of_face=image.crop(face_rois_in_image[0]))
 
         if record_status == CONSTANTS.RECORD_STATUS.JUST_STOPPED:
-            self._save(video_path)
+            self._save(who=self.who,
+                       pullup_counts=self.counter,
+                       evidence_path=video_path)
             self._reset_session()
 
 

@@ -14,8 +14,8 @@
       <file leaf-file-name="classify.py" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/classify.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="320">
-              <caret line="23" column="31" lean-forward="true" selection-start-line="23" selection-start-column="31" selection-end-line="23" selection-end-column="31" />
+            <state relative-caret-position="507">
+              <caret line="127" column="48" selection-start-line="127" selection-start-column="48" selection-end-line="127" selection-end-column="48" />
               <folding>
                 <element signature="e#640#649#0" expanded="true" />
               </folding>
@@ -240,8 +240,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/classify.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="320">
-          <caret line="23" column="31" lean-forward="true" selection-start-line="23" selection-start-column="31" selection-end-line="23" selection-end-column="31" />
+        <state relative-caret-position="507">
+          <caret line="127" column="48" selection-start-line="127" selection-start-column="48" selection-end-line="127" selection-end-column="48" />
           <folding>
             <element signature="e#640#649#0" expanded="true" />
           </folding>
