@@ -7,6 +7,8 @@ import time
 
 
 class VideoWriter:
+    DEFAULT_VIDEO_NAME = "video.mpg"
+
     def __init__(self, output_path: str = './videos', fps: float = 30.0, max_video_len_s: int = 60):
         if not os.path.exists(output_path):
             os.mkdir(output_path)
@@ -15,7 +17,7 @@ class VideoWriter:
         self.video_writer = None
         self.maximum_video_len_in_seconds = max_video_len_s
         self.video_creation_timestamp = 0
-        self.video_name = "video.mpg"
+        self.video_name = self.DEFAULT_VIDEO_NAME
 
     def _init_video_writer_if_needed(self, size: Tuple[int, int] = (320, 240)):
         if time.time() - self.video_creation_timestamp > self.maximum_video_len_in_seconds:
@@ -28,7 +30,7 @@ class VideoWriter:
             if not os.path.exists(video_path):
                 os.mkdir(video_path)
 
-            self.video_name = os.path.join(video_path, "video.mpg")
+            self.video_name = os.path.join(video_path, self.DEFAULT_VIDEO_NAME)
             self.video_writer = cv2.VideoWriter(self.video_name,
                                                 cv2.VideoWriter_fourcc('M', 'P', 'E', 'G'),
                                                 self.fps,
@@ -52,7 +54,7 @@ class VideoWriter:
             self.video_writer.release()
             print('Closed ' + self.video_name)
             self.video_writer = None
-            self.video_name = "video.mpg"
+            self.video_name = self.DEFAULT_VIDEO_NAME
             self.video_creation_timestamp = 0
 
         cv2.destroyAllWindows()

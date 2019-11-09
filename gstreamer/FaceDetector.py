@@ -2,7 +2,7 @@ from typing import List
 import platform
 import subprocess
 from edgetpu.detection.engine import DetectionEngine
-from edgetpu.utils import dataset_utils
+# from edgetpu.utils import dataset_utils
 from PIL import Image
 from PIL import ImageDraw
 
