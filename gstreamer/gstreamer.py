@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import numpy
 import sys
 import svgwrite
 import threading
@@ -122,16 +121,18 @@ class GstPipeline:
                 gstbuffer = self.gstbuffer
                 self.gstbuffer = None
 
-            result, mapinfo = gstbuffer.map(Gst.MapFlags.READ)
-            if result:
-              input_tensor = numpy.frombuffer(mapinfo.data, dtype=numpy.uint8)
-              svg = self.user_function(input_tensor, self.src_size, self.get_box())
-              if svg:
+            # Passing Gst.Buffer as input tensor avoids 2 copies of it:
+            # * Python bindings copies the data when mapping gstbuffer
+            # * Numpy copies the data when creating ndarray.
+            # This requires a recent version of the python3-edgetpu package. If this
+            # raises an exception please make sure dependencies are up to date.
+            input_tensor = gstbuffer
+            svg = self.user_function(input_tensor, self.src_size, self.get_box())
+            if svg:
                 if self.overlay:
                     self.overlay.set_property('data', svg)
                 if self.overlaysink:
                     self.overlaysink.set_property('svg', svg)
-            gstbuffer.unmap(mapinfo)
 
     def setup_window(self):
         # Only set up our own window if we have Coral overlay sink in the pipeline.
