@@ -101,6 +101,7 @@ def main():
     print("Loading %s with %s labels."%(args.model, args.labels))
     interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
+    labels = load_labels(args.labels)
 
     last_time = time.monotonic()
     def user_callback(image, svg_canvas):
@@ -117,7 +118,6 @@ def main():
           'FPS: %.2f fps' %(1.0/(end_time - last_time)),
       ]
       for result in results:
-          print('%s: %.5f' % (labels.get(result.id, result.id), result.score))
           text_lines.append('score=%.2f: %s' % (result.score, labels.get(result.id, result.id)))
       print(' '.join(text_lines))
       last_time = end_time
