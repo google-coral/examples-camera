@@ -14,20 +14,17 @@
 
 """A demo which runs object classification on camera frames."""
 import argparse
-import time
+import collections
+from edgetpu.classification.engine import ClassificationEngine
+import gstreamer
+import numpy as np
+import operator
+import os
+from PIL import Image
 import re
 import svgwrite
-import imp
-import os
-
-import collections
-import operator
-import numpy as np
-from PIL import Image
-
-from edgetpu.classification.engine import ClassificationEngine
 import tflite_runtime.interpreter as tflite
-import gstreamer
+import time
 
 Class = collections.namedtuple('Class', ['id', 'score'])
 EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
@@ -73,6 +70,11 @@ def set_input(interpreter, data):
     """Copies data to input tensor."""
     input_tensor(interpreter)[:, :] = data
 
+def set_interpreter(interpreter, image, resample=Image.NEAREST):
+    image = image.resize((input_size(interpreter)), resample)
+    set_input(interpreter, image)
+    interpreter.invoke()
+
 def get_output(interpreter, top_k, score_threshold):
     """Returns no more than top_k classes with score >= score_threshold."""
     scores = output_tensor(interpreter)
@@ -107,10 +109,7 @@ def main():
     def user_callback(image, svg_canvas):
       nonlocal last_time
       start_time = time.monotonic()
-      size = input_size(interpreter)
-      image = image.resize((size), Image.NEAREST) #eventually move this into one nice function I think. resample=Image.NEAREST
-      set_input(interpreter, image)
-      interpreter.invoke()
+      set_interpreter(interpreter, image)
       end_time = time.monotonic()
       results = get_output(interpreter, args.top_k, args.threshold)
       text_lines = [
