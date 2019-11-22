@@ -44,44 +44,44 @@ def generate_svg(dwg, text_lines):
       dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
 
 def make_interpreter(model_file):
-  model_file, *device = model_file.split('@')
-  return tflite.Interpreter(
-     model_path=model_file,
+    model_file, *device = model_file.split('@')
+    return tflite.Interpreter(
+      model_path=model_file,
       experimental_delegates=[
           tflite.load_delegate(EDGETPU_SHARED_LIB,
                                {'device': device[0]} if device else {})
       ])
 
 def input_size(interpreter):
-  """Returns input image size as (width, height) tuple."""
-  _, height, width, _ = interpreter.get_input_details()[0]['shape']
-  return width, height
+    """Returns input image size as (width, height) tuple."""
+    _, height, width, _ = interpreter.get_input_details()[0]['shape']
+    return width, height
 
 def input_tensor(interpreter):
-  """Returns input tensor view as numpy array of shape (height, width, 3)."""
-  tensor_index = interpreter.get_input_details()[0]['index']
-  return interpreter.tensor(tensor_index)()[0]
+    """Returns input tensor view as numpy array of shape (height, width, 3)."""
+    tensor_index = interpreter.get_input_details()[0]['index']
+    return interpreter.tensor(tensor_index)()[0]
 
 def output_tensor(interpreter):
-  """Returns dequantized output tensor."""
-  output_details = interpreter.get_output_details()[0]
-  output_data = np.squeeze(interpreter.tensor(output_details['index'])())
-  scale, zero_point = output_details['quantization']
-  return scale * (output_data - zero_point)
+    """Returns dequantized output tensor."""
+    output_details = interpreter.get_output_details()[0]
+    output_data = np.squeeze(interpreter.tensor(output_details['index'])())
+    scale, zero_point = output_details['quantization']
+    return scale * (output_data - zero_point)
 
 def set_input(interpreter, data):
-  """Copies data to input tensor."""
-  input_tensor(interpreter)[:, :] = data
+    """Copies data to input tensor."""
+    input_tensor(interpreter)[:, :] = data
 
 def get_output(interpreter, top_k, score_threshold):
-  """Returns no more than top_k classes with score >= score_threshold."""
-  scores = output_tensor(interpreter)
-  classes = [
-      Class(i, scores[i])
-      for i in np.argpartition(scores, -top_k)[-top_k:]
-      if scores[i] >= score_threshold
-  ]
-  return sorted(classes, key=operator.itemgetter(1), reverse=True)
+    """Returns no more than top_k classes with score >= score_threshold."""
+    scores = output_tensor(interpreter)
+    classes = [
+        Class(i, scores[i])
+        for i in np.argpartition(scores, -top_k)[-top_k:]
+        if scores[i] >= score_threshold
+    ]
+    return sorted(classes, key=operator.itemgetter(1), reverse=True)
 
 def main():
     default_model_dir = "../all_models"
@@ -99,9 +99,6 @@ def main():
     args = parser.parse_args()
 
     print("Loading %s with %s labels."%(args.model, args.labels))
-    engine = ClassificationEngine(args.model)
-    labels = load_labels(args.labels)
-
     interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
 
