@@ -22,20 +22,11 @@ import os
 from PIL import Image
 import re
 import svgwrite
-from tflite_runtime.interpreter import Interpreter
 import tflite_runtime.interpreter as tflite
 import time
 
 Class = collections.namedtuple('Class', ['id', 'score'])
 EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
-
-def detectCoralDevBoard():
-  try:
-    if 'MX8MQ' in open('/sys/firmware/devicetree/base/model').read():
-      print('Detected Edge TPU dev board.')
-      return True
-  except: pass
-  return False
 
 def load_labels(path):
     p = re.compile(r'\s*(\d+)(.+)')
@@ -109,10 +100,7 @@ def main():
     args = parser.parse_args()
 
     print("Loading %s with %s labels."%(args.model, args.labels))
-    if detectCoralDevBoard():
-        interpreter = make_interpreter(args.model)
-    else:
-        interpreter = Interpreter(args.model)
+    interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
     labels = load_labels(args.labels)
 
