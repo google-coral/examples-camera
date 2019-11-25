@@ -15,7 +15,12 @@
 # limitations under the License.
 
 if grep -s -q "MX8MQ" /sys/firmware/devicetree/base/model; then
-  echo "OpenCV is not yet suppported for DevBoard"
-else
-  sudo apt install python3-opencv
+  MENDEL_VER="$(cat /etc/mendel_version)"
+  if [[ "$MENDEL_VER" == "1.0" || "$MENDEL_VER" == "2.0" || "$MENDEL_VER" == "3.0" ]]; then
+    echo "Your version of Mendel is not compatible with OpenCV."
+    echo "You must upgrade to Mendel 4.0 or higher."
+    exit 1
+  fi
 fi
+
+sudo apt install python3-opencv

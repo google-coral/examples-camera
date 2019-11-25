@@ -1,7 +1,7 @@
-# GStreamer examples for inferencing on Coral
+# OpenCV examples for inferencing on Coral
 
-This folder contains example code using [GStreamer](https://github.com/GStreamer/gstreamer) to
-obtain camera images and then perform image classification or object detection on the Edge TPU.
+This folder contains example code using [OpenVC](https://github.com/opencv/opencv) to obtain
+camera images and then perform object detection on the Edge TPU.
 
 This code works on Linux using a webcam, Raspberry Pi with the Pi Camera, and on the Coral Dev
 Board using the Coral Camera or a webcam. For the first two, you also need a Coral
@@ -29,28 +29,17 @@ USB/PCIe/M.2 Accelerator.
     sh download_models.sh
     ```
 
-4.  Install the GStreamer libraries (if you're using the Coral Dev Board, you can skip this):
+4.  Install the OpenCV libraries:
 
     ```
-    bash gstreamer/install_requirements.sh
+    bash opencv/install_requirements.sh
     ```
 
 5.  Navigate to this code:
 
     ```
-    cd gstreamer
+    cd opencv
     ```
-
-
-## Run the classification demo
-
-```
-python3 classify.py
-```
-
-By default, this uses the ```mobilenet_v2_1.0_224_quant_edgetpu.tflite``` model.
-
-You can change the model and the labels file using flags ```--model``` and ```--labels```.
 
 
 ## Run the detection demo (SSD models)
@@ -61,6 +50,7 @@ python3 detect.py
 
 By default, this uses the ```mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite``` model.
 
-You can change the model and the labels file using flags ```--model``` and ```--labels```.
+You can change the model and the labels file using flags ```--model```
+and ```--labels```.
 
 
