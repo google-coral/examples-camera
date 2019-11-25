@@ -17,5 +17,6 @@
 if grep -s -q "MX8MQ" /sys/firmware/devicetree/base/model; then
   echo "OpenCV is not yet suppported for DevBoard"
 else
-  sudo apt install python3-opencv
+  sudo pip3 install opencv-contrib-python
+  sudo apt-get -y install libjasper1 libhdf5-100 libqtgui4 libatlas-base-dev libqt4-test
 fi
