@@ -30,7 +30,7 @@ This code works on Raspberry Pi with the Pi Camera and Coral USB Accelerator.
     sh download_models.sh
     ```
 
-5.  Install the picamera library:
+5.  Install picamera:
 
     ```
     cd raspicam

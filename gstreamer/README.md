@@ -32,13 +32,9 @@ USB/PCIe/M.2 Accelerator.
 4.  Install the GStreamer libraries (if you're using the Coral Dev Board, you can skip this):
 
     ```
-    bash gstreamer/install_requirements.sh
-    ```
-
-5.  Navigate to this code:
-
-    ```
     cd gstreamer
+
+    bash install_requirements.sh
     ```
 
 

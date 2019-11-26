@@ -32,13 +32,9 @@ USB/PCIe/M.2 Accelerator.
 4.  Install the OpenCV libraries:
 
     ```
-    bash opencv/install_requirements.sh
-    ```
-
-5.  Navigate to this code:
-
-    ```
     cd opencv
+
+    bash install_requirements.sh
     ```
 
 

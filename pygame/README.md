@@ -27,15 +27,10 @@ camera images and then perform image classification or object detection on the E
 4.  Install pygame:
 
     ```
-    bash pygame/install_requirements.sh
-    ```
-
-5.  Navigate to this code:
-
-    ```
     cd pygame
-    ```
 
+    bash install_requirements.sh
+    ```
 
 
 ## Run the classification demo
