@@ -1,4 +1,4 @@
-# OpenCV camera examples with Coral
+# Raspberry Pi camera examples with Coral
 
 This folder contains example code using [picamera](https://github.com/waveform80/picamera) to obtain
 camera images and perform image classification on the Edge TPU.
