@@ -61,7 +61,10 @@ def detectCoralDevBoard():
 def run_pipeline(user_function,
                  src_size=(640,480),
                  appsink_size=(320, 180)):
+    # For default camera (Coral Camera w/ Dev Board):
     PIPELINE = 'v4l2src device=/dev/video0 ! {src_caps} ! {leaky_q} '
+    # For alternative camera (USB camera w/ Dev Board):
+    #PIPELINE = 'v4l2src device=/dev/video1 ! {src_caps} ! {leaky_q} '
     if detectCoralDevBoard():
         SRC_CAPS = 'video/x-raw,format=YUY2,width={width},height={height},framerate=30/1'
         PIPELINE += """ ! glupload ! tee name=t

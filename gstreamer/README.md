@@ -1,7 +1,7 @@
-# GStreamer examples for inferencing on Coral
+# GStreamer camera examples with Coral
 
 This folder contains example code using [GStreamer](https://github.com/GStreamer/gstreamer) to
-obtain camera images and then perform image classification or object detection on the Edge TPU.
+obtain camera images and perform image classification and object detection on the Edge TPU.
 
 This code works on Linux using a webcam, Raspberry Pi with the Pi Camera, and on the Coral Dev
 Board using the Coral Camera or a webcam. For the first two, you also need a Coral
@@ -59,8 +59,8 @@ You can change the model and the labels file using flags ```--model``` and ```--
 python3 detect.py
 ```
 
-By default, this uses the ```mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite``` model.
+Likewise, you can change the model and the labels file using ```--model``` and ```--labels```.
 
-You can change the model and the labels file using flags ```--model``` and ```--labels```.
-
+By default, both examples use the attached Coral Camera. If you want to use a USB camera,
+edit the ```gstreamer.py``` file and change ```device=/dev/video0``` to ```device=/dev/video1```.
 

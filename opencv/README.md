@@ -1,7 +1,7 @@
-# OpenCV examples for inferencing on Coral
+# OpenCV camera examples with Coral
 
 This folder contains example code using [OpenVC](https://github.com/opencv/opencv) to obtain
-camera images and then perform object detection on the Edge TPU.
+camera images and perform object detection on the Edge TPU.
 
 This code works on Linux using a webcam, Raspberry Pi with the Pi Camera, and on the Coral Dev
 Board using the Coral Camera or a webcam. For the first two, you also need a Coral
@@ -50,7 +50,4 @@ python3 detect.py
 
 By default, this uses the ```mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite``` model.
 
-You can change the model and the labels file using flags ```--model```
-and ```--labels```.
-
-
+You can change the model and the labels file using flags ```--model``` and ```--labels```.

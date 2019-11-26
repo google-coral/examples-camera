@@ -1,7 +1,7 @@
-# OpenCV examples for inferencing on Coral
+# OpenCV camera examples with Coral
 
 This folder contains example code using [picamera](https://github.com/waveform80/picamera) to obtain
-camera images and then perform image classification on the Edge TPU.
+camera images and perform image classification on the Edge TPU.
 
 This code works on Raspberry Pi with the Pi Camera and Coral USB Accelerator.
 

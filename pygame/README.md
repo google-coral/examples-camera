@@ -1,4 +1,4 @@
-# P examples for inferencing on Coral
+# Pygame camera examples with Coral
 
 This folder contains example code using [pygame](https://github.com/pygame/pygame) to obtain
 camera images and then perform image classification or object detection on the Edge TPU.
