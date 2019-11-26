@@ -14,21 +14,20 @@
 
 """A demo to classify Pygame camera stream."""
 import argparse
-import os
-import io
-import time
+import collections
 from collections import deque
+import io
 import numpy as np
+import operator
+import os
 import pygame
 import pygame.camera
 from pygame.locals import *
-
 import tflite_runtime.interpreter as tflite
+import time
 
 Class = collections.namedtuple('Class', ['id', 'score'])
 EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
-
-import edgetpu.classification.engine
 
 def make_interpreter(model_file):
     model_file, *device = model_file.split('@')
@@ -40,9 +39,9 @@ def make_interpreter(model_file):
       ])
 
 def input_size(interpreter):
-    """Returns input image size as (width, height) tuple."""
-    _, height, width, _ = interpreter.get_input_details()[0]['shape']
-    return width, height
+    """Returns input image size as (width, height, channels) tuple."""
+    _, height, width, channels = interpreter.get_input_details()[0]['shape']
+    return width, height, channels
 
 def input_tensor(interpreter):
     """Returns input tensor view as numpy array of shape (height, width, 3)."""
@@ -56,13 +55,9 @@ def output_tensor(interpreter):
     scale, zero_point = output_details['quantization']
     return scale * (output_data - zero_point)
 
-def set_input(interpreter, data):
+def set_interpreter(interpreter, data):
     """Copies data to input tensor."""
-    input_tensor(interpreter)[:, :] = data
-
-def set_interpreter(interpreter, image, resample=Image.NEAREST):
-    image = image.resize((input_size(interpreter)), resample)
-    set_input(interpreter, image)
+    input_tensor(interpreter)[:,:] = np.reshape(data, (224, 224, 3))
     interpreter.invoke()
 
 def get_output(interpreter, top_k, score_threshold):
@@ -93,14 +88,12 @@ def main():
     interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
 
-    engine = edgetpu.classification.engine.ClassificationEngine(args.model)
-
     pygame.init()
     pygame.camera.init()
     camlist = pygame.camera.list_cameras()
 
     camera = pygame.camera.Camera(camlist[0], (640, 480)) 
-    _, width, height, channels = engine.get_input_tensor_shape()
+    width, height, channels = input_size(interpreter)
     camera.start()
     try:
         fps = deque(maxlen=20)
@@ -110,8 +103,8 @@ def main():
             imagen = pygame.transform.scale(imagen, (width, height))
             input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
             start_ms = time.time()
-            results = get_output(interpreter, top_k=3, threshold=0)
-            #results = get_output(interpreter, top_k=3, threshold=0)
+            set_interpreter(interpreter, input)
+            results = get_output(interpreter, top_k=3, score_threshold=0)
             inference_ms = (time.time() - start_ms)*1000.0
             fps.append(time.time())
             fps_ms = len(fps)/(fps[-1] - fps[0])
@@ -125,3 +118,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
