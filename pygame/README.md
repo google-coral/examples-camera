@@ -5,7 +5,7 @@ If you dont have pygame installed you can install it by:
 pip3 install pygame
 ```
 
-To run the demo execture the following command, which will use the default 
+To run the demo execute the following command, which will use the default 
 model ```mobilenet_v2_1.0_224_quant_edgetpu.tflite``` 
 
 You run the classifier with:

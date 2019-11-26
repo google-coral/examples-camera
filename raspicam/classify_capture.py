@@ -14,14 +14,59 @@
 
 """A demo to classify Raspberry Pi camera stream."""
 import argparse
-import os
-import io
-import time
+import collections
 from collections import deque
+import io
 import numpy as np
+import operator
+import os
 import picamera
+import tflite_runtime.interpreter as tflite
+import time
 
-import edgetpu.classification.engine
+Class = collections.namedtuple('Class', ['id', 'score'])
+EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
+
+def make_interpreter(model_file):
+    model_file, *device = model_file.split('@')
+    return tflite.Interpreter(
+      model_path=model_file,
+      experimental_delegates=[
+          tflite.load_delegate(EDGETPU_SHARED_LIB,
+                               {'device': device[0]} if device else {})
+      ])
+
+def input_size(interpreter):
+    """Returns input image size as (width, height, channels) tuple."""
+    _, height, width, channels = interpreter.get_input_details()[0]['shape']
+    return width, height, channels
+
+def input_tensor(interpreter):
+    """Returns input tensor view as numpy array of shape (height, width, 3)."""
+    tensor_index = interpreter.get_input_details()[0]['index']
+    return interpreter.tensor(tensor_index)()[0]
+
+def output_tensor(interpreter):
+    """Returns dequantized output tensor."""
+    output_details = interpreter.get_output_details()[0]
+    output_data = np.squeeze(interpreter.tensor(output_details['index'])())
+    scale, zero_point = output_details['quantization']
+    return scale * (output_data - zero_point)
+
+def set_interpreter(interpreter, data):
+    """Copies data to input tensor."""
+    input_tensor(interpreter)[:,:] = np.reshape(data, (224, 224, 3))
+    interpreter.invoke()
+
+def get_output(interpreter, top_k, score_threshold):
+    """Returns no more than top_k classes with score >= score_threshold."""
+    scores = output_tensor(interpreter)
+    classes = [
+        Class(i, scores[i])
+        for i in np.argpartition(scores, -top_k)[-top_k:]
+        if scores[i] >= score_threshold
+    ]
+    return sorted(classes, key=operator.itemgetter(1), reverse=True)
 
 def main():
     default_model_dir = "../all_models"
@@ -38,13 +83,14 @@ def main():
         pairs = (l.strip().split(maxsplit=1) for l in f.readlines())
         labels = dict((int(k), v) for k, v in pairs)
 
-    engine = edgetpu.classification.engine.ClassificationEngine(args.model)
+    interpreter = make_interpreter(args.model)
+    interpreter.allocate_tensors()
 
     with picamera.PiCamera() as camera:
         camera.resolution = (640, 480)
         camera.framerate = 30
         camera.annotate_text_size = 20
-        _, width, height, channels = engine.get_input_tensor_shape()
+        width, height, channels = input_size(interpreter)
         camera.start_preview()
         try:
             stream = io.BytesIO()
@@ -58,7 +104,8 @@ def main():
                 stream.seek(0)
                 input = np.frombuffer(stream.getvalue(), dtype=np.uint8)
                 start_ms = time.time()
-                results = engine.ClassifyWithInputTensor(input, top_k=3)
+                set_interpreter(interpreter, input)
+                results = get_output(interpreter, top_k=3, score_threshold=0)
                 inference_ms = (time.time() - start_ms)*1000.0
                 fps.append(time.time())
                 fps_ms = len(fps)/(fps[-1] - fps[0])
@@ -72,3 +119,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
