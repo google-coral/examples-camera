@@ -89,7 +89,6 @@ def get_output(interpreter, score_threshold, image_scale=1.0):
 
     return [make(i) for i in range(count) if scores[i] >= score_threshold]
 
-
 def main():
     cam_w, cam_h = 640, 480
     default_model_dir = "../all_models"

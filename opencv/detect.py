@@ -121,11 +121,9 @@ def main():
     args = parser.parse_args()
 
     print("Loading %s with %s labels."%(args.model, args.labels))
-
     interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
     labels = load_labels(args.labels)
-
 
     cap = cv2.VideoCapture(0)
 
@@ -165,4 +163,3 @@ def append_objs_to_img(cv2_im, objs, labels):
 
 if __name__ == '__main__':
     main()
-
