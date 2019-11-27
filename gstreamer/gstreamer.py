@@ -202,7 +202,10 @@ def detectCoralDevBoard():
   return False
 
 def run_pipeline(user_function, appsink_size):
+    # For default camera (Coral Camera w/ Dev Board):
     PIPELINE = 'v4l2src device=/dev/video0 ! {src_caps}'
+    # For alternative camera (USB camera w/ Dev Board):
+    #PIPELINE = 'v4l2src device=/dev/video1 ! {src_caps}'
     SRC_CAPS = 'video/x-raw,width={width},height={height},framerate=30/1'
     if detectCoralDevBoard():
         scale_caps = None
