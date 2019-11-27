@@ -17,9 +17,9 @@ import argparse
 import time
 import re
 import svgwrite
-import imp
 import os
 from edgetpu.classification.engine import ClassificationEngine
+import common
 import gstreamer
 
 def load_labels(path):
@@ -28,10 +28,12 @@ def load_labels(path):
        lines = (p.match(line).groups() for line in f.readlines())
        return {int(num): text.strip() for num, text in lines}
 
-def generate_svg(dwg, text_lines):
-    for y, line in enumerate(text_lines):
+def generate_svg(size, text_lines):
+    dwg = svgwrite.Drawing('', size=size)
+    for y, line in enumerate(text_lines, start=1):
       dwg.add(dwg.text(line, insert=(11, y*20+1), fill='black', font_size='20'))
       dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
+    return dwg.tostring()
 
 def main():
     default_model_dir = "../all_models"
@@ -52,23 +54,28 @@ def main():
     engine = ClassificationEngine(args.model)
     labels = load_labels(args.labels)
 
-    last_time = time.monotonic()
-    def user_callback(image, svg_canvas):
-      nonlocal last_time
+    input_shape = engine.get_input_tensor_shape()
+    inference_size = (input_shape[1], input_shape[2])
+
+    # Average fps over last 30 frames.
+    fps_counter  = common.avg_fps_counter(30)
+
+    def user_callback(input_tensor, src_size, inference_box):
+      nonlocal fps_counter
       start_time = time.monotonic()
-      results = engine.ClassifyWithImage(image, threshold=args.threshold, top_k=args.top_k)
+      results = engine.classify_with_input_tensor(input_tensor,
+          threshold=args.threshold, top_k=args.top_k)
       end_time = time.monotonic()
       text_lines = [
           'Inference: %.2f ms' %((end_time - start_time) * 1000),
-          'FPS: %.2f fps' %(1.0/(end_time - last_time)),
+          'FPS: %d fps' % (round(next(fps_counter))),
       ]
       for index, score in results:
         text_lines.append('score=%.2f: %s' % (score, labels[index]))
       print(' '.join(text_lines))
-      last_time = end_time
-      generate_svg(svg_canvas, text_lines)
+      return generate_svg(src_size, text_lines)
 
-    result = gstreamer.run_pipeline(user_callback)
+    result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
 
 if __name__ == '__main__':
     main()
