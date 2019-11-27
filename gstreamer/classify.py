@@ -22,11 +22,18 @@ import os
 from PIL import Image
 import re
 import svgwrite
+<<<<<<< HEAD
 import tflite_runtime.interpreter as tflite
 import time
 
 Class = collections.namedtuple('Class', ['id', 'score'])
 EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
+=======
+import os
+from edgetpu.classification.engine import ClassificationEngine
+import common
+import gstreamer
+>>>>>>> master
 
 def load_labels(path):
     p = re.compile(r'\s*(\d+)(.+)')
@@ -34,10 +41,12 @@ def load_labels(path):
        lines = (p.match(line).groups() for line in f.readlines())
        return {int(num): text.strip() for num, text in lines}
 
-def generate_svg(dwg, text_lines):
-    for y, line in enumerate(text_lines):
+def generate_svg(size, text_lines):
+    dwg = svgwrite.Drawing('', size=size)
+    for y, line in enumerate(text_lines, start=1):
       dwg.add(dwg.text(line, insert=(11, y*20+1), fill='black', font_size='20'))
       dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
+    return dwg.tostring()
 
 def make_interpreter(model_file):
     model_file, *device = model_file.split('@')
@@ -50,28 +59,22 @@ def make_interpreter(model_file):
 
 def input_size(interpreter):
     """Returns input image size as (width, height) tuple."""
-    _, height, width, _ = interpreter.get_input_details()[0]['shape']
-    return width, height
+    _, height, width, channels = interpreter.get_input_details()[0]['shape']
+    return width, height, channels
 
 def input_tensor(interpreter):
     """Returns input tensor view as numpy array of shape (height, width, 3)."""
     tensor_index = interpreter.get_input_details()[0]['index']
     return interpreter.tensor(tensor_index)()[0]
 
-def output_tensor(interpreter):
-    """Returns dequantized output tensor."""
-    output_details = interpreter.get_output_details()[0]
-    output_data = np.squeeze(interpreter.tensor(output_details['index'])())
-    scale, zero_point = output_details['quantization']
-    return scale * (output_data - zero_point)
-
-def set_input(interpreter, data):
-    """Copies data to input tensor."""
-    input_tensor(interpreter)[:, :] = data
+def output_tensor(interpreter, i):
+    """Returns output tensor view."""
+    tensor = interpreter.tensor(interpreter.get_output_details()[i]['index'])()
+    return np.squeeze(tensor)
 
 def set_interpreter(interpreter, image, resample=Image.NEAREST):
-    image = image.resize((input_size(interpreter)), resample)
-    set_input(interpreter, image)
+    #image = image.resize((input_size(interpreter)), resample)
+    input_tensor(interpreter)[:,:] = data
     interpreter.invoke()
 
 def get_output(interpreter, top_k, score_threshold):
@@ -104,25 +107,34 @@ def main():
     interpreter.allocate_tensors()
     labels = load_labels(args.labels)
 
-    last_time = time.monotonic()
-    def user_callback(image, svg_canvas):
-      nonlocal last_time
+    #input_shape = engine.get_input_tensor_shape()
+    #inference_size = (input_shape[1], input_shape[2])
+
+    w, h, _ = input_size(interpreter)
+    inference_size = (w, h)
+
+    # Average fps over last 30 frames.
+    fps_counter  = common.avg_fps_counter(30)
+
+    def user_callback(input_tensor, src_size, inference_box):
+      nonlocal fps_counter
       start_time = time.monotonic()
-      set_interpreter(interpreter, image)
+      set_interpreter(interpreter, input_tensor)
       results = get_output(interpreter, args.top_k, args.threshold)
+      #results = engine.classify_with_input_tensor(input_tensor,
+      #    threshold=args.threshold, top_k=args.top_k)
       end_time = time.monotonic()
       text_lines = [
           ' ',
           'Inference: %.2f ms' %((end_time - start_time) * 1000),
-          'FPS: %.2f fps' %(1.0/(end_time - last_time)),
+          'FPS: %d fps' % (round(next(fps_counter))),
       ]
       for result in results:
           text_lines.append('score=%.2f: %s' % (result.score, labels.get(result.id, result.id)))
       print(' '.join(text_lines))
-      last_time = end_time
-      generate_svg(svg_canvas, text_lines)
+      return generate_svg(src_size, text_lines)
 
-    result = gstreamer.run_pipeline(user_callback)
+    result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
 
 if __name__ == '__main__':
     main()

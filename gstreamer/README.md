@@ -5,8 +5,9 @@ former two you will also need a Coral USB Accelerator to run the models.
 
 ## Installation
 
-Make sure the gstreamer libraries are install. On the Coral DevBoard this isn't
+Make sure the gstreamer libraries are installed. On the Coral DevBoard this isn't
 necessary, but on Raspberry Pi or a general Linux system it will be.
+On the Dev Board ensure you're running the latest system image, for other systems ensure that the edgetpu packages are up to date. This demo will not work with older versions.
 
 ```
 sh install_requirements.sh
