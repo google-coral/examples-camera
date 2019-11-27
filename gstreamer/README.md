@@ -1,34 +1,63 @@
-This folder contains two examples using gstreamer to obtain camera images. These
-examples work on Linux using a webcam, Raspberry Pi with
-the Raspicam and on the Coral DevBoard using the Coral camera. For the
-former two you will also need a Coral USB Accelerator to run the models.
+# GStreamer camera examples with Coral
 
-## Installation
+This folder contains example code using [GStreamer](https://github.com/GStreamer/gstreamer) to
+obtain camera images and perform image classification and object detection on the Edge TPU.
 
-Make sure the gstreamer libraries are installed. On the Coral DevBoard this isn't
-necessary, but on Raspberry Pi or a general Linux system it will be.
-On the Dev Board ensure you're running the latest system image, for other systems ensure that the edgetpu packages are up to date. This demo will not work with older versions.
-
-```
-sh install_requirements.sh
-```
+This code works on Linux using a webcam, Raspberry Pi with the Pi Camera, and on the Coral Dev
+Board using the Coral Camera or a webcam. For the first two, you also need a Coral
+USB/PCIe/M.2 Accelerator.
 
 
-## Classification Demo
+## Set up your device
+
+1.  First, be sure you have completed the [setup instructions for your Coral
+    device](https://coral.ai/docs/setup/). If it's been a while, repeat to be sure
+    you have the latest software.
+
+2.  Clone this Git repo onto your computer or Dev Board:
+
+    ```
+    mkdir google-coral && cd google-coral
+
+    git clone https://github.com/google-coral/examples-camera --depth 1
+    ```
+
+3.  Download the models:
+
+    ```
+    cd examples-camera
+
+    sh download_models.sh
+    ```
+
+4.  Install the GStreamer libraries (if you're using the Coral Dev Board, you can skip this):
+
+    ```
+    cd gstreamer
+
+    bash install_requirements.sh
+    ```
+
+
+## Run the classification demo
 
 ```
 python3 classify.py
 ```
 
-You can change the model and the labels file using flags ```--model``` and
-```--labels```.
-## Detection Demo (SSD models)
+By default, this uses the ```mobilenet_v2_1.0_224_quant_edgetpu.tflite``` model.
+
+You can change the model and the labels file using flags ```--model``` and ```--labels```.
+
+
+## Run the detection demo (SSD models)
 
 ```
 python3 detect.py
 ```
 
-As before, you can change the model and the labels file using flags ```--model``` 
-and ```--labels```.
+Likewise, you can change the model and the labels file using ```--model``` and ```--labels```.
 
+By default, both examples use the attached Coral Camera. If you want to use a USB camera,
+edit the ```gstreamer.py``` file and change ```device=/dev/video0``` to ```device=/dev/video1```.
 

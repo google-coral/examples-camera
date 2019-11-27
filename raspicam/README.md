@@ -1,29 +1,52 @@
-This folder contains some simple camera classification examples specific to Raspberry
-Pi, using the picamera python module to access the camera.
+# Raspberry Pi camera examples with Coral
 
-If you dont have picamera installed you can install it by:
+This folder contains example code using [picamera](https://github.com/waveform80/picamera) to obtain
+camera images and perform image classification on the Edge TPU.
 
-```
-pip3 install picamera
-```
+This code works on Raspberry Pi with the Pi Camera and Coral USB Accelerator.
 
-Don't forget to enable your camera using raspi-config under "Interfacing Options":
 
-```
-sudo raspi-config 
-```
+## Set up your device
 
-To run the demo execture the following command, which will use the default 
-model ```mobilenet_v2_1.0_224_quant_edgetpu.tflite``` 
+1.  First, be sure you have completed the [setup instructions for the USB
+    Accelerator](https://coral.ai/docs/accelerator/get-started/).
 
+2.  Follow the guide to [connect and configure the Pi Camera](
+    https://www.raspberrypi.org/documentation/configuration/camera.md).
+
+3.  Clone this Git repo onto your Raspberry Pi:
+
+    ```
+    mkdir google-coral && cd google-coral
+
+    git clone https://github.com/google-coral/examples-camera --depth 1
+    ```
+
+4.  Download the models:
+
+    ```
+    cd examples-camera
+
+    sh download_models.sh
+    ```
+
+5.  Install picamera:
+
+    ```
+    cd raspicam
+
+    bash install_requirements.sh
+    ```
+
+
+## Run the classification demo
 
 ```
 python3 classify_capture.py
-``` 
-
-You can change the model and the labels file using flags:
-
 ```
-python3 classify_capture.py --model ../all_models/inception_v3_299_quant_edgetpu.tflite
 
-``` 
+By default, this uses the ```mobilenet_v2_1.0_224_quant_edgetpu.tflite``` model.
+
+You can change the model and the labels file using flags ```--model``` and ```--labels```.
+
+

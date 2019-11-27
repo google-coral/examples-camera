@@ -12,20 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A demo which runs object detection on camera frames.
+"""A demo that runs object detection on camera frames using OpenCV.
 
-export TEST_DATA=/usr/lib/python3/dist-packages/edgetpu/test_data
+TEST_DATA=../all_models
 
 Run face detection model:
-python3 -m edgetpuvision.detect \
+python3 detect.py \
   --model ${TEST_DATA}/mobilenet_ssd_v2_face_quant_postprocess_edgetpu.tflite
 
 Run coco model:
-python3 -m edgetpuvision.detect \
+python3 detect.py \
   --model ${TEST_DATA}/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite \
   --labels ${TEST_DATA}/coco_labels.txt
-
-Press Q key to exit.
 
 """
 import cv2
@@ -89,12 +87,12 @@ def append_objs_to_img(cv2_im, objs, labels):
     height, width, channels = cv2_im.shape
     for obj in objs:
         x0, y0, x1, y1 = obj.bounding_box.flatten().tolist()
-        x0, y0, x1, y1 = int(x0*width), int(y0*height), int(x1*width), int(y1*height)  
+        x0, y0, x1, y1 = int(x0*width), int(y0*height), int(x1*width), int(y1*height)
         percent = int(100 * obj.score)
         label = '%d%% %s' % (percent, labels[obj.label_id])
 
         cv2_im = cv2.rectangle(cv2_im, (x0, y0), (x1, y1), (0, 255, 0), 2)
-        cv2_im = cv2.putText(cv2_im, label, (x0, y0+30), 
+        cv2_im = cv2.putText(cv2_im, label, (x0, y0+30),
                              cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 0, 0), 2)
     return cv2_im
 
