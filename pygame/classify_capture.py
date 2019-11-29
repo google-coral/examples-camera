@@ -46,7 +46,8 @@ def main():
     pygame.camera.init()
     camlist = pygame.camera.list_cameras()
 
-    camera = pygame.camera.Camera(camlist[0], (640, 480)) 
+    print("By default using camera: ", camlist[-1])
+    camera = pygame.camera.Camera(camlist[-1], (640, 480)) 
     _, width, height, channels = engine.get_input_tensor_shape()
     camera.start()
     try:
@@ -57,7 +58,7 @@ def main():
             imagen = pygame.transform.scale(imagen, (width, height))
             input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
             start_ms = time.time()
-            results = engine.ClassifyWithInputTensor(input, top_k=3)
+            results = engine.classify_with_input_tensor(input, top_k=3)
             inference_ms = (time.time() - start_ms)*1000.0
             fps.append(time.time())
             fps_ms = len(fps)/(fps[-1] - fps[0])
