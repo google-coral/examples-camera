@@ -45,12 +45,6 @@ def generate_svg(size, text_lines):
       dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
     return dwg.tostring()
 
-"""def generate_svg(dwg, text_lines):
-    for y, line in enumerate(text_lines):
-      dwg.add(dwg.text(line, insert=(11, y*20+1), fill='black', font_size='20'))
-      dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
-"""
-
 def make_interpreter(model_file):
     model_file, *device = model_file.split('@')
     return tflite.Interpreter(
@@ -62,8 +56,8 @@ def make_interpreter(model_file):
 
 def input_size(interpreter):
     """Returns input image size as (width, height) tuple."""
-    _, height, width, _ = interpreter.get_input_details()[0]['shape']
-    return width, height
+    _, height, width, channels = interpreter.get_input_details()[0]['shape']
+    return width, height, channels
 
 def input_tensor(interpreter):
     """Returns input tensor view as numpy array of shape (height, width, 3)."""
@@ -81,7 +75,8 @@ def set_input(interpreter, buf):
     """Copies data to input tensor."""
     result, mapinfo = buf.map(Gst.MapFlags.READ)
     if result:
-        input_tensor(interpreter)[:, :] = mapinfo.data
+        np_buffer = np.reshape(np.frombuffer(mapinfo.data, dtype=np.uint8), input_size(interpreter))
+        input_tensor(interpreter)[:, :] = np_buffer
         buf.unmap(mapinfo)
 
 def set_interpreter(interpreter, data):
@@ -119,9 +114,8 @@ def main():
     interpreter.allocate_tensors()
     labels = load_labels(args.labels)
 
-    w, h = input_size(interpreter)
+    w, h, _  = input_size(interpreter)
     inference_size = (w, h)
-
     # Average fps over last 30 frames.
     fps_counter = common.avg_fps_counter(30)
 
@@ -136,13 +130,13 @@ def main():
           'Inference: %.2f ms' %((end_time - start_time) * 1000),
           'FPS: %d fps' % (round(next(fps_counter))),
       ]
-      #for result in results:
-      #    text_lines.append('score=%.2f: %s' % (result.score, labels.get(result.id, result.id)))
+      for result in results:
+          text_lines.append('score=%.2f: %s' % (result.score, labels.get(result.id, result.id)))
       print(' '.join(text_lines))
       return generate_svg(src_size, text_lines)
-      #generate_svg(svg_canvas, text_lines)
 
     result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
 
 if __name__ == '__main__':
     main()
+
