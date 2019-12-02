@@ -55,7 +55,7 @@ def output_tensor(interpreter):
 
 def set_interpreter(interpreter, data):
     """Copies data to input tensor."""
-    input_tensor(interpreter)[:,:] = np.reshape(data, (224, 224, 3))
+    input_tensor(interpreter)[:,:] = np.reshape(data, input_size(interpreter))
     interpreter.invoke()
 
 def get_output(interpreter, top_k, score_threshold):
