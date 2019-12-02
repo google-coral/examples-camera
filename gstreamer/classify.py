@@ -16,18 +16,16 @@
 import argparse
 import collections
 import common
+import gi
+from gi.repository import Gst
 import gstreamer
 import numpy as np
 import operator
 import os
-from PIL import Image
 import re
 import svgwrite
 import tflite_runtime.interpreter as tflite
 import time
-
-import gi
-from gi.repository import Gst
 
 Class = collections.namedtuple('Class', ['id', 'score'])
 EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
@@ -55,7 +53,7 @@ def make_interpreter(model_file):
       ])
 
 def input_size(interpreter):
-    """Returns input image size as (width, height) tuple."""
+    """Returns input size as (width, height, channels) tuple."""
     _, height, width, channels = interpreter.get_input_details()[0]['shape']
     return width, height, channels
 
@@ -80,7 +78,6 @@ def set_input(interpreter, buf):
         buf.unmap(mapinfo)
 
 def set_interpreter(interpreter, data):
-    #image = image.resize((input_size(interpreter)), resample)
     set_input(interpreter, data)
     interpreter.invoke()
 
