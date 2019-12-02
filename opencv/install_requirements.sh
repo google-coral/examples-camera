@@ -15,8 +15,14 @@
 # limitations under the License.
 
 if grep -s -q "MX8MQ" /sys/firmware/devicetree/base/model; then
-  echo "OpenCV is not yet suppported for DevBoard"
-else
-  sudo pip3 install opencv-contrib-python
-  sudo apt-get -y install libjasper1 libhdf5-100 libqtgui4 libatlas-base-dev libqt4-test
+  MENDEL_VER="$(cat /etc/mendel_version)"
+  if [[ "$MENDEL_VER" == "1.0" || "$MENDEL_VER" == "2.0" || "$MENDEL_VER" == "3.0" ]]; then
+    echo "Your version of Mendel is not compatible with OpenCV."
+    echo "You must upgrade to Mendel 4.0 or higher."
+    exit 1
+  fi
 fi
+
+sudo pip3 install opencv-contrib-python
+sudo apt-get -y install libjasper1 libhdf5-100 libqtgui4 libatlas-base-dev libqt4-test
+sudo apt install python3-opencv

@@ -92,7 +92,8 @@ def main():
     pygame.camera.init()
     camlist = pygame.camera.list_cameras()
 
-    camera = pygame.camera.Camera(camlist[0], (640, 480)) 
+    print("By default using camera: ", camlist[-1])
+    camera = pygame.camera.Camera(camlist[-1], (640, 480)) 
     width, height, channels = input_size(interpreter)
     camera.start()
     try:

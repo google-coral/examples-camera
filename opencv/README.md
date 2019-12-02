@@ -1,7 +1,12 @@
-# Pygame camera examples with Coral
+# OpenCV camera examples with Coral
 
-This folder contains example code using [pygame](https://github.com/pygame/pygame) to obtain
-camera images and then perform image classification or object detection on the Edge TPU.
+This folder contains example code using [OpenVC](https://github.com/opencv/opencv) to obtain
+camera images and perform object detection on the Edge TPU.
+
+This code works on Linux using a webcam, Raspberry Pi with the Pi Camera, and on the Coral Dev
+Board using the Coral Camera or a webcam. For the first two, you also need a Coral
+USB/PCIe/M.2 Accelerator.
+
 
 ## Set up your device
 
@@ -24,23 +29,13 @@ camera images and then perform image classification or object detection on the E
     sh download_models.sh
     ```
 
-4.  Install pygame:
+4.  Install the OpenCV libraries:
 
     ```
-    cd pygame
+    cd opencv
 
     bash install_requirements.sh
     ```
-
-
-## Run the classification demo
-```
-python3 classify_capture.py
-```
-
-By default, this uses the ```mobilenet_v2_1.0_224_quant_edgetpu.tflite``` model.
-
-You can change the model and the labels file using flags ```--model``` and ```--labels```.
 
 
 ## Run the detection demo (SSD models)
