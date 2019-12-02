@@ -81,8 +81,6 @@ def set_input(interpreter, buf):
     """Copies data to input tensor."""
     result, mapinfo = buf.map(Gst.MapFlags.READ)
     if result:
-        print(type(input_tensor(interpreter))
-        print(input_tensor(interpreter).dtype)
         input_tensor(interpreter)[:, :] = mapinfo.data
         buf.unmap(mapinfo)
 
