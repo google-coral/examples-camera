@@ -58,7 +58,7 @@ def input_size(interpreter):
     return width, height, channels
 
 def input_tensor(interpreter):
-    """Returns input tensor view as numpy array of shape (height, width, 3)."""
+    """Returns input tensor view as numpy array of shape (height, width, channels)."""
     tensor_index = interpreter.get_input_details()[0]['index']
     return interpreter.tensor(tensor_index)()[0]
 
@@ -136,4 +136,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
