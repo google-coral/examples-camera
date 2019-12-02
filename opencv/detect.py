@@ -12,20 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A demo which runs object detection on camera frames.
+"""A demo that runs object detection on camera frames using OpenCV.
 
-export TEST_DATA=/usr/lib/python3/dist-packages/edgetpu/test_data
+TEST_DATA=../all_models
 
 Run face detection model:
-python3 -m edgetpuvision.detect \
+python3 detect.py \
   --model ${TEST_DATA}/mobilenet_ssd_v2_face_quant_postprocess_edgetpu.tflite
 
 Run coco model:
-python3 -m edgetpuvision.detect \
+python3 detect.py \
   --model ${TEST_DATA}/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite \
   --labels ${TEST_DATA}/coco_labels.txt
-
-Press Q key to exit.
 
 """
 import argparse

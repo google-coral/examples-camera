@@ -14,8 +14,46 @@
 
 """Common utilities."""
 import collections
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst
+import numpy as np
 import svgwrite
+import tflite_runtime.interpreter as tflite
 import time
+
+EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
+
+def make_interpreter(model_file):
+    model_file, *device = model_file.split('@')
+    return tflite.Interpreter(
+      model_path=model_file,
+      experimental_delegates=[
+          tflite.load_delegate(EDGETPU_SHARED_LIB,
+                               {'device': device[0]} if device else {})
+      ])
+
+def input_size(interpreter):
+    """Returns input size as (width, height, channels) tuple."""
+    _, height, width, channels = interpreter.get_input_details()[0]['shape']
+    return width, height, channels
+
+def input_tensor(interpreter):
+    """Returns input tensor view as numpy array of shape (height, width, channels)."""
+    tensor_index = interpreter.get_input_details()[0]['index']
+    return interpreter.tensor(tensor_index)()[0]
+
+def set_input(interpreter, buf):
+    """Copies data to input tensor."""
+    result, mapinfo = buf.map(Gst.MapFlags.READ)
+    if result:
+        np_buffer = np.reshape(np.frombuffer(mapinfo.data, dtype=np.uint8), input_size(interpreter))
+        input_tensor(interpreter)[:, :] = np_buffer
+        buf.unmap(mapinfo)
+
+def set_interpreter(interpreter, data):
+    set_input(interpreter, data)
+    interpreter.invoke()
 
 def avg_fps_counter(window_size):
     window = collections.deque(maxlen=window_size)

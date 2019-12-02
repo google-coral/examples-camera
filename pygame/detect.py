@@ -122,8 +122,16 @@ def main():
     camlist = pygame.camera.list_cameras()
 
     w, h, _ = input_size(interpreter)
-    camera = pygame.camera.Camera(camlist[0], (cam_w, cam_h))
-    display = pygame.display.set_mode((cam_w, cam_h), 0)
+  
+    print("By default using camera: ", camlist[-1])
+    camera = pygame.camera.Camera(camlist[-1], (cam_w, cam_h))
+    try:
+      display = pygame.display.set_mode((cam_w, cam_h), 0)
+    except pygame.error as e:
+      sys.stderr.write("\nERROR: Unable to open a display window. Make sure a monitor is attached and that "
+            "the DISPLAY environment variable is set. Example: \n"
+            ">export DISPLAY=\":0\" \n")
+      raise e 
 
     red = pygame.Color(255, 0, 0)
 
@@ -148,8 +156,10 @@ def main():
                pygame.draw.rect(mysurface, red, rect, 1)
                label = "%.0f%% %s" % (100*result.score, labels.get(result.id, result.id))
                text = font.render(label, True, red)
+               print(label, ' ', end='')
                mysurface.blit(text, (x0 * cam_w , y0 * cam_h))
             text = font.render(annotate_text, True, red)
+            print(annotate_text)
             mysurface.blit(text, (0, 0))
             display.blit(mysurface, (0, 0))
             pygame.display.flip()
