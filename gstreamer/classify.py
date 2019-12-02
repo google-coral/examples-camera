@@ -16,19 +16,15 @@
 import argparse
 import collections
 import common
-import gi
-from gi.repository import Gst
 import gstreamer
 import numpy as np
 import operator
 import os
 import re
 import svgwrite
-import tflite_runtime.interpreter as tflite
 import time
 
 Class = collections.namedtuple('Class', ['id', 'score'])
-EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
 
 def load_labels(path):
     p = re.compile(r'\s*(\d+)(.+)')
@@ -43,43 +39,12 @@ def generate_svg(size, text_lines):
       dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
     return dwg.tostring()
 
-def make_interpreter(model_file):
-    model_file, *device = model_file.split('@')
-    return tflite.Interpreter(
-      model_path=model_file,
-      experimental_delegates=[
-          tflite.load_delegate(EDGETPU_SHARED_LIB,
-                               {'device': device[0]} if device else {})
-      ])
-
-def input_size(interpreter):
-    """Returns input size as (width, height, channels) tuple."""
-    _, height, width, channels = interpreter.get_input_details()[0]['shape']
-    return width, height, channels
-
-def input_tensor(interpreter):
-    """Returns input tensor view as numpy array of shape (height, width, channels)."""
-    tensor_index = interpreter.get_input_details()[0]['index']
-    return interpreter.tensor(tensor_index)()[0]
-
 def output_tensor(interpreter):
     """Returns dequantized output tensor."""
     output_details = interpreter.get_output_details()[0]
     output_data = np.squeeze(interpreter.tensor(output_details['index'])())
     scale, zero_point = output_details['quantization']
     return scale * (output_data - zero_point)
-
-def set_input(interpreter, buf):
-    """Copies data to input tensor."""
-    result, mapinfo = buf.map(Gst.MapFlags.READ)
-    if result:
-        np_buffer = np.reshape(np.frombuffer(mapinfo.data, dtype=np.uint8), input_size(interpreter))
-        input_tensor(interpreter)[:, :] = np_buffer
-        buf.unmap(mapinfo)
-
-def set_interpreter(interpreter, data):
-    set_input(interpreter, data)
-    interpreter.invoke()
 
 def get_output(interpreter, top_k, score_threshold):
     """Returns no more than top_k classes with score >= score_threshold."""
