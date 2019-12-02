@@ -86,7 +86,7 @@ class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
     """
     __slots__ = ()
 
-def get_output(interpreter, score_threshold, image_scale=1.0):
+def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
     """Returns list of detected objects."""
     boxes = output_tensor(interpreter, 0)
     class_ids = output_tensor(interpreter, 1)
@@ -103,7 +103,7 @@ def get_output(interpreter, score_threshold, image_scale=1.0):
                       xmax=np.minimum(1.0, xmax),
                       ymax=np.minimum(1.0, ymax)))
 
-    return [make(i) for i in range(count) if scores[i] >= score_threshold]
+    return [make(i) for i in range(top_k) if scores[i] >= score_threshold]
 
 def main():
     default_model_dir = '../all_models'
@@ -136,7 +136,7 @@ def main():
         pil_im = Image.fromarray(cv2_im)
 
         set_interpreter(interpreter, pil_im)
-        objs = get_output(interpreter, score_threshold=args.threshold)
+        objs = get_output(interpreter, score_threshold=args.threshold, top_k=args.top_k)
         cv2_im = append_objs_to_img(cv2_im, objs, labels)
 
         cv2.imshow('frame', cv2_im)

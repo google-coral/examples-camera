@@ -70,12 +70,11 @@ class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
     """
     __slots__ = ()
 
-def get_output(interpreter, score_threshold, image_scale=1.0):
+def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
     """Returns list of detected objects."""
     boxes = output_tensor(interpreter, 0)
     class_ids = output_tensor(interpreter, 1)
     scores = output_tensor(interpreter, 2)
-    count = int(output_tensor(interpreter, 3))
 
     def make(i):
         ymin, xmin, ymax, xmax = boxes[i]
@@ -87,7 +86,7 @@ def get_output(interpreter, score_threshold, image_scale=1.0):
                       xmax=np.minimum(1.0, xmax),
                       ymax=np.minimum(1.0, ymax)))
 
-    return [make(i) for i in range(count) if scores[i] >= score_threshold]
+    return [make(i) for i in range(top_k) if scores[i] >= score_threshold]
 
 def main():
     cam_w, cam_h = 640, 480
@@ -137,7 +136,7 @@ def main():
             input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
             start_time = time.monotonic()
             set_interpreter(interpreter, input)
-            results = get_output(interpreter, score_threshold=args.threshold)
+            results = get_output(interpreter, score_threshold=args.threshold, top_k=args.top_k)
             stop_time = time.monotonic()
             inference_ms = (stop_time - start_time)*1000.0
             fps_ms = 1.0 / (stop_time - last_time)
