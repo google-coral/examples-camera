@@ -25,18 +25,13 @@ python3 detect.py \
 import argparse
 import collections
 import common
-import gi
-gi.require_version('Gst', '1.0')
-from gi.repository import Gst
 import gstreamer
 import numpy as np
 import os
 import re
 import svgwrite
-import tflite_runtime.interpreter as tflite
 import time
 
-EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
 Object = collections.namedtuple('Object', ['id', 'score', 'bbox'])
 
 def load_labels(path):
@@ -120,11 +115,11 @@ def main():
     args = parser.parse_args()
 
     print("Loading %s with %s labels."%(args.model, args.labels))
-    interpreter = make_interpreter(args.model)
+    interpreter = common.make_interpreter(args.model)
     interpreter.allocate_tensors()
     labels = load_labels(args.labels)
 
-    w, h, _ = input_size(interpreter)
+    w, h, _ = common.input_size(interpreter)
     inference_size = (w, h)
     # Average fps over last 30 frames.
     fps_counter  = common.avg_fps_counter(30)
@@ -132,7 +127,7 @@ def main():
     def user_callback(input_tensor, src_size, inference_box):
       nonlocal fps_counter
       start_time = time.monotonic()
-      set_interpreter(interpreter, input_tensor)
+      common.set_interpreter(interpreter, input_tensor)
       objs = get_output(interpreter, args.threshold, args.top_k)
       end_time = time.monotonic()
       text_lines = [

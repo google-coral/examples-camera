@@ -72,11 +72,11 @@ def main():
     args = parser.parse_args()
 
     print("Loading %s with %s labels."%(args.model, args.labels))
-    interpreter = make_interpreter(args.model)
+    interpreter = common.make_interpreter(args.model)
     interpreter.allocate_tensors()
     labels = load_labels(args.labels)
 
-    w, h, _  = input_size(interpreter)
+    w, h, _  = common.input_size(interpreter)
     inference_size = (w, h)
     # Average fps over last 30 frames.
     fps_counter = common.avg_fps_counter(30)
@@ -84,7 +84,7 @@ def main():
     def user_callback(input_tensor, src_size, inference_box):
       nonlocal fps_counter
       start_time = time.monotonic()
-      set_interpreter(interpreter, input_tensor)
+      common.set_interpreter(interpreter, input_tensor)
       results = get_output(interpreter, args.top_k, args.threshold)
       end_time = time.monotonic()
       text_lines = [
