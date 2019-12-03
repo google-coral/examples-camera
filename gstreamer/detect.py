@@ -26,13 +26,16 @@ python3 detect.py \
   --labels ${TEST_DATA}/coco_labels.txt
 """
 import argparse
-import time
-import re
-import svgwrite
-import os
-from edgetpu.detection.engine import DetectionEngine
+import collections
 import common
 import gstreamer
+import numpy as np
+import os
+import re
+import svgwrite
+import time
+
+Object = collections.namedtuple('Object', ['id', 'score', 'bbox'])
 
 def load_labels(path):
     p = re.compile(r'\s*(\d+)(.+)')
@@ -54,7 +57,7 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
     for y, line in enumerate(text_lines, start=1):
         shadow_text(dwg, 10, y*20, line)
     for obj in objs:
-        x0, y0, x1, y1 = obj.bounding_box.flatten().tolist()
+        x0, y0, x1, y1 = list(obj.bbox)
         # Relative coordinates.
         x, y, w, h = x0, y0, x1 - x0, y1 - y0
         # Absolute coordinates, input tensor space.
@@ -64,11 +67,40 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
         # Scale to source coordinate space.
         x, y, w, h = x * scale_x, y * scale_y, w * scale_x, h * scale_y
         percent = int(100 * obj.score)
-        label = '%d%% %s' % (percent, labels[obj.label_id])
+        label = '%d%% %s' % (percent, labels.get(obj.id, obj.id))
         shadow_text(dwg, x, y - 5, label)
         dwg.add(dwg.rect(insert=(x,y), size=(w, h),
                         fill='none', stroke='red', stroke_width='2'))
     return dwg.tostring()
+
+def output_tensor(interpreter, i):
+    """Returns output tensor view."""
+    tensor = interpreter.tensor(interpreter.get_output_details()[i]['index'])()
+    return np.squeeze(tensor)
+
+class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
+    """Bounding box.
+    Represents a rectangle which sides are either vertical or horizontal, parallel
+    to the x or y axis.
+    """
+    __slots__ = ()
+
+def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
+    """Returns list of detected objects."""
+    boxes = output_tensor(interpreter, 0)
+    class_ids = output_tensor(interpreter, 1)
+    scores = output_tensor(interpreter, 2)
+
+    def make(i):
+        ymin, xmin, ymax, xmax = boxes[i]
+        return Object(
+            id=int(class_ids[i]),
+            score=scores[i],
+            bbox=BBox(xmin=np.maximum(0.0, xmin),
+                      ymin=np.maximum(0.0, ymin),
+                      xmax=np.minimum(1.0, xmax),
+                      ymax=np.minimum(1.0, ymax)))
+    return [make(i) for i in range(top_k) if scores[i] >= score_threshold]
 
 def main():
     default_model_dir = '../all_models'
@@ -86,23 +118,21 @@ def main():
     args = parser.parse_args()
 
     print("Loading %s with %s labels."%(args.model, args.labels))
-    engine = DetectionEngine(args.model)
+    interpreter = common.make_interpreter(args.model)
+    interpreter.allocate_tensors()
     labels = load_labels(args.labels)
 
-    input_shape = engine.get_input_tensor_shape()
-    inference_size = (input_shape[1], input_shape[2])
-
+    w, h, _ = common.input_size(interpreter)
+    inference_size = (w, h)
     # Average fps over last 30 frames.
     fps_counter  = common.avg_fps_counter(30)
 
     def user_callback(input_tensor, src_size, inference_box):
       nonlocal fps_counter
       start_time = time.monotonic()
-      objs = engine.detect_with_input_tensor(input_tensor,
-                                    threshold=args.threshold,
-                                    top_k=args.top_k)
+      common.set_interpreter(interpreter, input_tensor)
+      objs = get_output(interpreter, args.threshold, args.top_k)
       end_time = time.monotonic()
-
       text_lines = [
           'Inference: %.2f ms' %((end_time - start_time) * 1000),
           'FPS: %d fps' % (round(next(fps_counter))),

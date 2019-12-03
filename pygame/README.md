@@ -34,7 +34,6 @@ camera images and then perform image classification or object detection on the E
 
 
 ## Run the classification demo
-
 ```
 python3 classify_capture.py
 ```
@@ -53,5 +52,3 @@ python3 detect.py
 By default, this uses the ```mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite``` model.
 
 You can change the model and the labels file using flags ```--model``` and ```--labels```.
-
-

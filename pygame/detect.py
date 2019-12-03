@@ -14,24 +14,79 @@
 
 """A demo to run the detector in a Pygame camera stream."""
 import argparse
-import os
-import sys
-import io
-import time
-import re
+import collections
 from collections import deque
+import io
 import numpy as np
+import os
 import pygame
 import pygame.camera
 from pygame.locals import *
+import re
+import tflite_runtime.interpreter as tflite
+import time
 
-from edgetpu.detection.engine import DetectionEngine
+EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
+Object = collections.namedtuple('Object', ['id', 'score', 'bbox'])
 
 def load_labels(path):
     p = re.compile(r'\s*(\d+)(.+)')
     with open(path, 'r', encoding='utf-8') as f:
        lines = (p.match(line).groups() for line in f.readlines())
        return {int(num): text.strip() for num, text in lines}
+
+def make_interpreter(model_file):
+    model_file, *device = model_file.split('@')
+    return tflite.Interpreter(
+      model_path=model_file,
+      experimental_delegates=[
+          tflite.load_delegate(EDGETPU_SHARED_LIB,
+                               {'device': device[0]} if device else {})
+      ])
+
+def input_size(interpreter):
+    """Returns input image size as (width, height, channels) 3-tuple."""
+    _, height, width, channels = interpreter.get_input_details()[0]['shape']
+    return width, height, channels
+
+def input_tensor(interpreter):
+    """Returns input tensor view as numpy array of shape (height, width, 3)."""
+    tensor_index = interpreter.get_input_details()[0]['index']
+    return interpreter.tensor(tensor_index)()[0]
+
+def output_tensor(interpreter, i):
+    """Returns output tensor view."""
+    tensor = interpreter.tensor(interpreter.get_output_details()[i]['index'])()
+    return np.squeeze(tensor)
+
+def set_interpreter(interpreter, data):
+    input_tensor(interpreter)[:,:] = np.reshape(data, (input_size(interpreter)))
+    interpreter.invoke()
+
+class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
+    """Bounding box.
+    Represents a rectangle which sides are either vertical or horizontal, parallel
+    to the x or y axis.
+    """
+    __slots__ = ()
+
+def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
+    """Returns list of detected objects."""
+    boxes = output_tensor(interpreter, 0)
+    class_ids = output_tensor(interpreter, 1)
+    scores = output_tensor(interpreter, 2)
+
+    def make(i):
+        ymin, xmin, ymax, xmax = boxes[i]
+        return Object(
+            id=int(class_ids[i]),
+            score=scores[i],
+            bbox=BBox(xmin=np.maximum(0.0, xmin),
+                      ymin=np.maximum(0.0, ymin),
+                      xmax=np.minimum(1.0, xmax),
+                      ymax=np.minimum(1.0, ymax)))
+
+    return [make(i) for i in range(top_k) if scores[i] >= score_threshold]
 
 def main():
     cam_w, cam_h = 640, 480
@@ -54,7 +109,9 @@ def main():
         labels = dict((int(k), v) for k, v in pairs)
 
     print("Loading %s with %s labels."%(args.model, args.labels))
-    engine = DetectionEngine(args.model)
+
+    interpreter = make_interpreter(args.model)
+    interpreter.allocate_tensors()
     labels = load_labels(args.labels)
 
     pygame.init()
@@ -64,10 +121,10 @@ def main():
     pygame.camera.init()
     camlist = pygame.camera.list_cameras()
 
-    _, w, h, _ = engine.get_input_tensor_shape()
-    
+    w, h, _ = input_size(interpreter)
+  
     print("By default using camera: ", camlist[-1])
-    camera = pygame.camera.Camera(camlist[-1], (cam_w, cam_h)) 
+    camera = pygame.camera.Camera(camlist[-1], (cam_w, cam_h))
     try:
       display = pygame.display.set_mode((cam_w, cam_h), 0)
     except pygame.error as e:
@@ -75,6 +132,7 @@ def main():
             "the DISPLAY environment variable is set. Example: \n"
             ">export DISPLAY=\":0\" \n")
       raise e 
+
     red = pygame.Color(255, 0, 0)
 
     camera.start()
@@ -85,17 +143,18 @@ def main():
             imagen = pygame.transform.scale(mysurface, (w, h))
             input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
             start_time = time.monotonic()
-            results = engine.detect_with_input_tensor(input, threshold=args.threshold, top_k=args.top_k)
+            set_interpreter(interpreter, input)
+            results = get_output(interpreter, score_threshold=args.threshold, top_k=args.top_k)
             stop_time = time.monotonic()
             inference_ms = (stop_time - start_time)*1000.0
             fps_ms = 1.0 / (stop_time - last_time)
             last_time = stop_time
             annotate_text = "Inference: %5.2fms FPS: %3.1f" % (inference_ms, fps_ms)
             for result in results:
-               x0, y0, x1, y1 = result.bounding_box.flatten().tolist()
+               x0, y0, x1, y1 = list(result.bbox)
                rect = pygame.Rect(x0 * cam_w, y0 * cam_h, (x1 - x0) * cam_w, (y1 - y0) * cam_h)
                pygame.draw.rect(mysurface, red, rect, 1)
-               label = "%.0f%% %s" % (100*result.score, labels[result.label_id])
+               label = "%.0f%% %s" % (100*result.score, labels.get(result.id, result.id))
                text = font.render(label, True, red)
                print(label, ' ', end='')
                mysurface.blit(text, (x0 * cam_w , y0 * cam_h))
