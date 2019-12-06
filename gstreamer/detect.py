@@ -131,6 +131,7 @@ def main():
       nonlocal fps_counter
       start_time = time.monotonic()
       common.set_interpreter(interpreter, input_tensor)
+      # For larger input tensor sizes, use the edgetpu.detection.engine for better performance
       objs = get_output(interpreter, args.threshold, args.top_k)
       end_time = time.monotonic()
       text_lines = [
