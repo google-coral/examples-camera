@@ -3,6 +3,8 @@
 This folder contains example code using [pygame](https://github.com/pygame/pygame) to obtain
 camera images and then perform image classification or object detection on the Edge TPU.
 
+This code works on Linux using a webcam, Raspberry Pi with the Pi Camera, and on the Coral Dev Board using a webcam. For the first two, you also need a Coral USB/PCIe/M.2 Accelerator.
+
 ## Set up your device
 
 1.  First, be sure you have completed the [setup instructions for your Coral
