@@ -26,7 +26,7 @@ Coral device such as the
     ```
     cd examples-camera
 
-    ./install_requirements.sh
+    sh install_requirements.sh
     ```
 
     These canned models will be downloaded and extracted to a new folder
