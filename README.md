@@ -9,11 +9,12 @@ Coral device such as the
 ## Installation
 
 1.  First, be sure you have completed the [setup instructions for your Coral
-    device](https://coral.withgoogle.com/docs/accelerator/get-started/).
+    device](https://coral.ai/docs/setup/). If it's been a while, repeat to be sure
+    you have the latest software.
 
     Importantly, you should have the latest TensorFlow Lite runtime installed
     (as per the [Python quickstart](
-    https://www.tensorflow.org/lite/guide/python)
+    https://www.tensorflow.org/lite/guide/python)).
 
 2.  Clone this Git repo onto your computer:
 
