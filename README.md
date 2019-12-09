@@ -1,14 +1,36 @@
 # Edge TPU simple camera examples
 
 This repo contains a collection of examples that use camera streams
-together with the Edge TPU Python API.
+together with the [TensorFlow Lite API](https://tensorflow.org/lite) with a
+Coral device such as the
+[USB Accelerator](https://coral.withgoogle.com/products/accelerator) or
+[Dev Board](https://coral.withgoogle.com/products/dev-board).
 
 ## Installation
 
-Before you start using the examples run
-the ```download_models.sh``` script in order to download a selection of models.
-These canned models will be downloaded and extracted to a new folder
-```all_models```.
+1.  First, be sure you have completed the [setup instructions for your Coral
+    device](https://coral.withgoogle.com/docs/accelerator/get-started/).
+
+    Importantly, you should have the latest TensorFlow Lite runtime installed
+    (as per the [Python quickstart](
+    https://www.tensorflow.org/lite/guide/python)
+
+2.  Clone this Git repo onto your computer:
+
+    ```
+    git clone https://github.com/google-coral/examples-camera.git
+    ```
+
+3.  Download a selection of canned models:
+
+    ```
+    cd examples-camera
+
+    ./install_requirements.sh
+    ```
+
+    These canned models will be downloaded and extracted to a new folder
+    ```all_models```.
 
 
 Further requirements may be needed by the different camera libraries, check the
