@@ -19,15 +19,17 @@ Coral device such as the
 2.  Clone this Git repo onto your computer:
 
     ```
-    git clone https://github.com/google-coral/examples-camera.git
+    mkdir google-coral && cd google-coral
+
+    git clone https://github.com/google-coral/examples-camera.git --depth 1
     ```
 
-3.  Download a selection of canned models:
+3.  Download the models:
 
     ```
     cd examples-camera
 
-    sh install_requirements.sh
+    sh download_models.sh
     ```
 
     These canned models will be downloaded and extracted to a new folder
