@@ -33,7 +33,7 @@ def make_interpreter(model_file):
                                {'device': device[0]} if device else {})
       ])
 
-def input_size(interpreter):
+def input_image_size(interpreter):
     """Returns input size as (width, height, channels) tuple."""
     _, height, width, channels = interpreter.get_input_details()[0]['shape']
     return width, height, channels
@@ -47,11 +47,12 @@ def set_input(interpreter, buf):
     """Copies data to input tensor."""
     result, mapinfo = buf.map(Gst.MapFlags.READ)
     if result:
-        np_buffer = np.reshape(np.frombuffer(mapinfo.data, dtype=np.uint8), input_size(interpreter))
+        np_buffer = np.reshape(np.frombuffer(mapinfo.data, dtype=np.uint8), input_image_size(interpreter))
         input_tensor(interpreter)[:, :] = np_buffer
         buf.unmap(mapinfo)
 
 def set_interpreter(interpreter, data):
+    """Set input and invoke the interpreter. Cannot be invoked without first setting the input."""
     set_input(interpreter, data)
     interpreter.invoke()
 

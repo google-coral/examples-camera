@@ -44,7 +44,7 @@ def make_interpreter(model_file):
                                {'device': device[0]} if device else {})
       ])
 
-def input_size(interpreter):
+def input_image_size(interpreter):
     """Returns input image size as (width, height, channels) 3-tuple."""
     _, height, width, channels = interpreter.get_input_details()[0]['shape']
     return width, height, channels
@@ -60,7 +60,7 @@ def output_tensor(interpreter, i):
     return np.squeeze(tensor)
 
 def set_interpreter(interpreter, data):
-    input_tensor(interpreter)[:,:] = np.reshape(data, (input_size(interpreter)))
+    input_tensor(interpreter)[:,:] = np.reshape(data, (input_image_size(interpreter)))
     interpreter.invoke()
 
 class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
@@ -90,7 +90,7 @@ def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
 
 def main():
     cam_w, cam_h = 640, 480
-    default_model_dir = "../all_models"
+    default_model_dir = '../all_models'
     default_model = 'mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite'
     default_labels = 'coco_labels.txt'
     parser = argparse.ArgumentParser()
@@ -99,16 +99,16 @@ def main():
     parser.add_argument('--labels', help='label file path',
                         default=os.path.join(default_model_dir, default_labels))
     parser.add_argument('--top_k', type=int, default=5,
-                        help='number of classes with highest score to display')
+                        help='number of categories with highest score to display')
     parser.add_argument('--threshold', type=float, default=0.5,
-                        help='class score threshold')
+                        help='classifier score threshold')
     args = parser.parse_args()
 
     with open(args.labels, 'r') as f:
         pairs = (l.strip().split(maxsplit=1) for l in f.readlines())
         labels = dict((int(k), v) for k, v in pairs)
 
-    print("Loading %s with %s labels."%(args.model, args.labels))
+    print('Loading {} with {} labels.'.format(args.model, args.labels))
 
     interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
@@ -116,14 +116,14 @@ def main():
 
     pygame.init()
     pygame.font.init()
-    font = pygame.font.SysFont("Arial", 20)
+    font = pygame.font.SysFont('Arial', 20)
 
     pygame.camera.init()
     camlist = pygame.camera.list_cameras()
 
-    w, h, _ = input_size(interpreter)
+    w, h, _ = input_image_size(interpreter)
   
-    print("By default using camera: ", camlist[-1])
+    print('By default using camera: ', camlist[-1])
     camera = pygame.camera.Camera(camlist[-1], (cam_w, cam_h))
     try:
       display = pygame.display.set_mode((cam_w, cam_h), 0)
@@ -149,12 +149,12 @@ def main():
             inference_ms = (stop_time - start_time)*1000.0
             fps_ms = 1.0 / (stop_time - last_time)
             last_time = stop_time
-            annotate_text = "Inference: %5.2fms FPS: %3.1f" % (inference_ms, fps_ms)
+            annotate_text = 'Inference: {:5.2f}ms FPS: {:3.1f}'.format(inference_ms, fps_ms)
             for result in results:
                x0, y0, x1, y1 = list(result.bbox)
                rect = pygame.Rect(x0 * cam_w, y0 * cam_h, (x1 - x0) * cam_w, (y1 - y0) * cam_h)
                pygame.draw.rect(mysurface, red, rect, 1)
-               label = "%.0f%% %s" % (100*result.score, labels.get(result.id, result.id))
+               label = '{:.0f}% {}'.format(100*result.score, labels.get(result.id, result.id))
                text = font.render(label, True, red)
                print(label, ' ', end='')
                mysurface.blit(text, (x0 * cam_w , y0 * cam_h))

@@ -67,7 +67,7 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
         # Scale to source coordinate space.
         x, y, w, h = x * scale_x, y * scale_y, w * scale_x, h * scale_y
         percent = int(100 * obj.score)
-        label = '%d%% %s' % (percent, labels.get(obj.id, obj.id))
+        label = '{}% {}'.format(percent, labels.get(obj.id, obj.id))
         shadow_text(dwg, x, y - 5, label)
         dwg.add(dwg.rect(insert=(x,y), size=(w, h),
                         fill='none', stroke='red', stroke_width='2'))
@@ -88,13 +88,13 @@ class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
 def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
     """Returns list of detected objects."""
     boxes = output_tensor(interpreter, 0)
-    class_ids = output_tensor(interpreter, 1)
+    category_ids = output_tensor(interpreter, 1)
     scores = output_tensor(interpreter, 2)
 
     def make(i):
         ymin, xmin, ymax, xmax = boxes[i]
         return Object(
-            id=int(class_ids[i]),
+            id=int(category_ids[i]),
             score=scores[i],
             bbox=BBox(xmin=np.maximum(0.0, xmin),
                       ymin=np.maximum(0.0, ymin),
@@ -112,17 +112,17 @@ def main():
     parser.add_argument('--labels', help='label file path',
                         default=os.path.join(default_model_dir, default_labels))
     parser.add_argument('--top_k', type=int, default=3,
-                        help='number of classes with highest score to display')
+                        help='number of categories with highest score to display')
     parser.add_argument('--threshold', type=float, default=0.1,
-                        help='class score threshold')
+                        help='classifier score threshold')
     args = parser.parse_args()
 
-    print("Loading %s with %s labels."%(args.model, args.labels))
+    print('Loading {} with {} labels.'.format(args.model, args.labels))
     interpreter = common.make_interpreter(args.model)
     interpreter.allocate_tensors()
     labels = load_labels(args.labels)
 
-    w, h, _ = common.input_size(interpreter)
+    w, h, _ = common.input_image_size(interpreter)
     inference_size = (w, h)
     # Average fps over last 30 frames.
     fps_counter  = common.avg_fps_counter(30)
@@ -131,12 +131,12 @@ def main():
       nonlocal fps_counter
       start_time = time.monotonic()
       common.set_interpreter(interpreter, input_tensor)
-      # For larger input tensor sizes, use the edgetpu.detection.engine for better performance
+      # For larger input image sizes, use the edgetpu.classification.engine for better performance
       objs = get_output(interpreter, args.threshold, args.top_k)
       end_time = time.monotonic()
       text_lines = [
-          'Inference: %.2f ms' %((end_time - start_time) * 1000),
-          'FPS: %d fps' % (round(next(fps_counter))),
+          'Inference: {:.2f} ms'.format((end_time - start_time) * 1000),
+          'FPS: {} fps'.format(round(next(fps_counter))),
       ]
       print(' '.join(text_lines))
       return generate_svg(src_size, inference_size, inference_box, objs, labels, text_lines)

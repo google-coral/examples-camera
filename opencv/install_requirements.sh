@@ -26,3 +26,5 @@ fi
 sudo pip3 install opencv-contrib-python
 sudo apt-get -y install libjasper1 libhdf5-100 libqtgui4 libatlas-base-dev libqt4-test
 sudo apt install python3-opencv
+# For Rasperry Pi: this command works for Raspbian Buster and onwwards. For older versions
+# you can build OpenCV yourself or install the unofficial opencv-contrib-python package.

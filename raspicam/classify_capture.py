@@ -24,7 +24,7 @@ import picamera
 import tflite_runtime.interpreter as tflite
 import time
 
-Class = collections.namedtuple('Class', ['id', 'score'])
+Category = collections.namedtuple('Category', ['id', 'score'])
 EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
 
 def make_interpreter(model_file):
@@ -36,7 +36,7 @@ def make_interpreter(model_file):
                                {'device': device[0]} if device else {})
       ])
 
-def input_size(interpreter):
+def input_image_size(interpreter):
     """Returns input image size as (width, height, channels) tuple."""
     _, height, width, channels = interpreter.get_input_details()[0]['shape']
     return width, height, channels
@@ -55,21 +55,21 @@ def output_tensor(interpreter):
 
 def set_interpreter(interpreter, data):
     """Copies data to input tensor."""
-    input_tensor(interpreter)[:,:] = np.reshape(data, input_size(interpreter))
+    input_tensor(interpreter)[:,:] = np.reshape(data, input_image_size(interpreter))
     interpreter.invoke()
 
 def get_output(interpreter, top_k, score_threshold):
-    """Returns no more than top_k classes with score >= score_threshold."""
+    """Returns no more than top_k categories with score >= score_threshold."""
     scores = output_tensor(interpreter)
-    classes = [
-        Class(i, scores[i])
+    categories = [
+        Category(i, scores[i])
         for i in np.argpartition(scores, -top_k)[-top_k:]
         if scores[i] >= score_threshold
     ]
-    return sorted(classes, key=operator.itemgetter(1), reverse=True)
+    return sorted(categories, key=operator.itemgetter(1), reverse=True)
 
 def main():
-    default_model_dir = "../all_models"
+    default_model_dir = '../all_models'
     default_model = 'mobilenet_v2_1.0_224_quant_edgetpu.tflite'
     default_labels = 'imagenet_labels.txt'
     parser = argparse.ArgumentParser()
@@ -90,7 +90,7 @@ def main():
         camera.resolution = (640, 480)
         camera.framerate = 30
         camera.annotate_text_size = 20
-        width, height, channels = input_size(interpreter)
+        width, height, channels = input_image_size(interpreter)
         camera.start_preview()
         try:
             stream = io.BytesIO()
@@ -109,9 +109,9 @@ def main():
                 inference_ms = (time.time() - start_ms)*1000.0
                 fps.append(time.time())
                 fps_ms = len(fps)/(fps[-1] - fps[0])
-                camera.annotate_text = "Inference: %5.2fms FPS: %3.1f" % (inference_ms, fps_ms)
+                camera.annotate_text = 'Inference: {:5.2f}ms FPS: {:3.1f}'.format(inference_ms, fps_ms)
                 for result in results:
-                   camera.annotate_text += "\n%.0f%% %s" % (100*result[1], labels[result[0]])
+                   camera.annotate_text += '\n{:.0f}% {}'.format(100*result[1], labels[result[0]])
                 print(camera.annotate_text)
         finally:
             camera.stop_preview()

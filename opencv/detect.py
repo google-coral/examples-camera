@@ -53,7 +53,7 @@ def make_interpreter(model_file):
                                {'device': device[0]} if device else {})
       ])
 
-def input_size(interpreter):
+def input_image_size(interpreter):
     """Returns input image size as (width, height) tuple."""
     _, height, width, _ = interpreter.get_input_details()[0]['shape']
     return width, height
@@ -73,7 +73,7 @@ def set_input(interpreter, data):
     input_tensor(interpreter)[:, :] = data
 
 def set_interpreter(interpreter, image, resample=Image.NEAREST):
-    image = image.resize((input_size(interpreter)), resample)
+    image = image.resize((input_image_size(interpreter)), resample)
     set_input(interpreter, image)
     interpreter.invoke()
 
@@ -113,12 +113,12 @@ def main():
     parser.add_argument('--labels', help='label file path',
                         default=os.path.join(default_model_dir, default_labels))
     parser.add_argument('--top_k', type=int, default=3,
-                        help='number of classes with highest score to display')
+                        help='number of categories with highest score to display')
     parser.add_argument('--threshold', type=float, default=0.1,
-                        help='class score threshold')
+                        help='classifier score threshold')
     args = parser.parse_args()
 
-    print("Loading %s with %s labels."%(args.model, args.labels))
+    print('Loading {} with {} labels.'.format(args.model, args.labels))
     interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
     labels = load_labels(args.labels)
@@ -151,7 +151,7 @@ def append_objs_to_img(cv2_im, objs, labels):
         x0, y0, x1, y1 = list(obj.bbox)
         x0, y0, x1, y1 = int(x0*width), int(y0*height), int(x1*width), int(y1*height)
         percent = int(100 * obj.score)
-        label = '%d%% %s' % (percent, labels.get(obj.id, obj.id))
+        label = '{}% {}'.format(percent, labels.get(obj.id, obj.id))
 
         cv2_im = cv2.rectangle(cv2_im, (x0, y0), (x1, y1), (0, 255, 0), 2)
         cv2_im = cv2.putText(cv2_im, label, (x0, y0+30),
