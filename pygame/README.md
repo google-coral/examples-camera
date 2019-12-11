@@ -13,7 +13,8 @@ This code works on Linux using a webcam, Raspberry Pi with the Pi Camera, and on
 
     Importantly, you should have the latest TensorFlow Lite runtime installed
     (as per the [Python quickstart](
-    https://www.tensorflow.org/lite/guide/python)).
+    https://www.tensorflow.org/lite/guide/python)). You can check which version is installed
+    using the ```pip3 show tflite_runtime``` command.
 
 2.  Clone this Git repo onto your computer or Dev Board:
 
