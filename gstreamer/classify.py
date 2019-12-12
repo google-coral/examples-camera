@@ -39,16 +39,9 @@ def generate_svg(size, text_lines):
       dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
     return dwg.tostring()
 
-def output_tensor(interpreter):
-    """Returns dequantized output tensor."""
-    output_details = interpreter.get_output_details()[0]
-    output_data = np.squeeze(interpreter.tensor(output_details['index'])())
-    scale, zero_point = output_details['quantization']
-    return scale * (output_data - zero_point)
-
 def get_output(interpreter, top_k, score_threshold):
     """Returns no more than top_k categories with score >= score_threshold."""
-    scores = output_tensor(interpreter)
+    scores = common.output_tensor(interpreter, 0)
     categories = [
         Category(i, scores[i])
         for i in np.argpartition(scores, -top_k)[-top_k:]
@@ -84,7 +77,8 @@ def main():
     def user_callback(input_tensor, src_size, inference_box):
       nonlocal fps_counter
       start_time = time.monotonic()
-      common.set_interpreter(interpreter, input_tensor)
+      common.set_input(interpreter, input_tensor)
+      interpreter.invoke()
       # For larger input image sizes, use the edgetpu.classification.engine for better performance
       results = get_output(interpreter, args.top_k, args.threshold)
       end_time = time.monotonic()

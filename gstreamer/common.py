@@ -51,10 +51,16 @@ def set_input(interpreter, buf):
         input_tensor(interpreter)[:, :] = np_buffer
         buf.unmap(mapinfo)
 
-def set_interpreter(interpreter, data):
-    """Set input and invoke the interpreter. Cannot be invoked without first setting the input."""
-    set_input(interpreter, data)
-    interpreter.invoke()
+def output_tensor(interpreter, i):
+    """Returns dequantized output tensor if quantized before."""
+    output_details = interpreter.get_output_details()[i]
+    output_data = np.squeeze(interpreter.tensor(output_details['index'])())
+    if 'quantization' not in output_details:
+        return output_data
+    scale, zero_point = output_details['quantization']
+    if scale == 0:
+        return output_data - zero_point
+    return scale * (output_data - zero_point)
 
 def avg_fps_counter(window_size):
     window = collections.deque(maxlen=window_size)

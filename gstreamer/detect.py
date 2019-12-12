@@ -73,11 +73,6 @@ def generate_svg(src_size, inference_size, inference_box, objs, labels, text_lin
                         fill='none', stroke='red', stroke_width='2'))
     return dwg.tostring()
 
-def output_tensor(interpreter, i):
-    """Returns output tensor view."""
-    tensor = interpreter.tensor(interpreter.get_output_details()[i]['index'])()
-    return np.squeeze(tensor)
-
 class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
     """Bounding box.
     Represents a rectangle which sides are either vertical or horizontal, parallel
@@ -87,9 +82,9 @@ class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
 
 def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
     """Returns list of detected objects."""
-    boxes = output_tensor(interpreter, 0)
-    category_ids = output_tensor(interpreter, 1)
-    scores = output_tensor(interpreter, 2)
+    boxes = common.output_tensor(interpreter, 0)
+    category_ids = common.output_tensor(interpreter, 1)
+    scores = common.output_tensor(interpreter, 2)
 
     def make(i):
         ymin, xmin, ymax, xmax = boxes[i]
@@ -130,7 +125,8 @@ def main():
     def user_callback(input_tensor, src_size, inference_box):
       nonlocal fps_counter
       start_time = time.monotonic()
-      common.set_interpreter(interpreter, input_tensor)
+      common.set_input(interpreter, input_tensor)
+      interpreter.invoke()
       # For larger input image sizes, use the edgetpu.classification.engine for better performance
       objs = get_output(interpreter, args.threshold, args.top_k)
       end_time = time.monotonic()
