@@ -24,6 +24,7 @@ import pygame
 import pygame.camera
 from pygame.locals import *
 import re
+import sys
 import tflite_runtime.interpreter as tflite
 import time
 
