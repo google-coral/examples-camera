@@ -66,6 +66,7 @@ def main():
         if not ret:
             break
         cv2_im = frame
+        cv2_im = cv2.cvtColor(cv2_im, cv2.COLOR_BGR2RGB)
 
         pil_im = Image.fromarray(cv2_im)
 
@@ -74,6 +75,7 @@ def main():
                                     top_k=args.top_k)
 
         cv2_im = append_objs_to_img(cv2_im, objs, labels)
+        cv2_im = cv2.cvtColor(cv2_im, cv2.COLOR_BGR2RGB)
 
         cv2.imshow('frame', cv2_im)
         if cv2.waitKey(1) & 0xFF == ord('q'):
