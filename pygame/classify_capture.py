@@ -16,6 +16,7 @@
 import argparse
 import collections
 from collections import deque
+import common
 import io
 import numpy as np
 import operator
@@ -26,52 +27,25 @@ from pygame.locals import *
 import tflite_runtime.interpreter as tflite
 import time
 
-Class = collections.namedtuple('Class', ['id', 'score'])
-EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
-
-def make_interpreter(model_file):
-    model_file, *device = model_file.split('@')
-    return tflite.Interpreter(
-      model_path=model_file,
-      experimental_delegates=[
-          tflite.load_delegate(EDGETPU_SHARED_LIB,
-                               {'device': device[0]} if device else {})
-      ])
-
-def input_size(interpreter):
-    """Returns input image size as (width, height, channels) tuple."""
-    _, height, width, channels = interpreter.get_input_details()[0]['shape']
-    return width, height, channels
+Category = collections.namedtuple('Category', ['id', 'score'])
 
 def input_tensor(interpreter):
     """Returns input tensor view as numpy array of shape (height, width, 3)."""
     tensor_index = interpreter.get_input_details()[0]['index']
     return interpreter.tensor(tensor_index)()[0]
 
-def output_tensor(interpreter):
-    """Returns dequantized output tensor."""
-    output_details = interpreter.get_output_details()[0]
-    output_data = np.squeeze(interpreter.tensor(output_details['index'])())
-    scale, zero_point = output_details['quantization']
-    return scale * (output_data - zero_point)
-
-def set_interpreter(interpreter, data):
-    """Copies data to input tensor."""
-    input_tensor(interpreter)[:,:] = np.reshape(data, (input_size(interpreter)))
-    interpreter.invoke()
-
 def get_output(interpreter, top_k, score_threshold):
-    """Returns no more than top_k classes with score >= score_threshold."""
-    scores = output_tensor(interpreter)
-    classes = [
-        Class(i, scores[i])
+    """Returns no more than top_k categories with score >= score_threshold."""
+    scores = common.output_tensor(interpreter, 0)
+    categories = [
+        Category(i, scores[i])
         for i in np.argpartition(scores, -top_k)[-top_k:]
         if scores[i] >= score_threshold
     ]
-    return sorted(classes, key=operator.itemgetter(1), reverse=True)
+    return sorted(categories, key=operator.itemgetter(1), reverse=True)
 
 def main():
-    default_model_dir = "../all_models"
+    default_model_dir = '../all_models'
     default_model = 'mobilenet_v2_1.0_224_quant_edgetpu.tflite'
     default_labels = 'imagenet_labels.txt'
     parser = argparse.ArgumentParser()
@@ -85,16 +59,16 @@ def main():
         pairs = (l.strip().split(maxsplit=1) for l in f.readlines())
         labels = dict((int(k), v) for k, v in pairs)
 
-    interpreter = make_interpreter(args.model)
+    interpreter = common.make_interpreter(args.model)
     interpreter.allocate_tensors()
 
     pygame.init()
     pygame.camera.init()
     camlist = pygame.camera.list_cameras()
 
-    print("By default using camera: ", camlist[-1])
+    print('By default using camera: ', camlist[-1])
     camera = pygame.camera.Camera(camlist[-1], (640, 480)) 
-    width, height, channels = input_size(interpreter)
+    width, height, channels = common.input_image_size(interpreter)
     camera.start()
     try:
         fps = deque(maxlen=20)
@@ -104,14 +78,15 @@ def main():
             imagen = pygame.transform.scale(imagen, (width, height))
             input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
             start_ms = time.time()
-            set_interpreter(interpreter, input)
+            common.input_tensor(interpreter)[:,:] = np.reshape(input, (common.input_image_size(interpreter)))
+            interpreter.invoke()
             results = get_output(interpreter, top_k=3, score_threshold=0)
             inference_ms = (time.time() - start_ms)*1000.0
             fps.append(time.time())
             fps_ms = len(fps)/(fps[-1] - fps[0])
-            annotate_text = "Inference: %5.2fms FPS: %3.1f" % (inference_ms, fps_ms)
+            annotate_text = 'Inference: {:5.2f}ms FPS: {:3.1f}'.format(inference_ms, fps_ms)
             for result in results:
-               annotate_text += "\n%.0f%% %s" % (100*result[1], labels[result[0]])
+               annotate_text += '\n{:.0f}% {}'.format(100*result[1], labels[result[0]])
             print(annotate_text)
     finally:
         camera.stop()

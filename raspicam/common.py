@@ -13,14 +13,8 @@
 # limitations under the License.
 
 """Common utilities."""
-import collections
-import gi
-gi.require_version('Gst', '1.0')
-from gi.repository import Gst
 import numpy as np
-import svgwrite
 import tflite_runtime.interpreter as tflite
-import time
 
 EDGETPU_SHARED_LIB = 'libedgetpu.so.1'
 
@@ -34,22 +28,14 @@ def make_interpreter(model_file):
       ])
 
 def input_image_size(interpreter):
-    """Returns input size as (width, height, channels) tuple."""
+    """Returns input image size as (width, height, channels) tuple."""
     _, height, width, channels = interpreter.get_input_details()[0]['shape']
     return width, height, channels
 
 def input_tensor(interpreter):
-    """Returns input tensor view as numpy array of shape (height, width, channels)."""
+    """Returns input tensor view as numpy array of shape (height, width, 3)."""
     tensor_index = interpreter.get_input_details()[0]['index']
     return interpreter.tensor(tensor_index)()[0]
-
-def set_input(interpreter, buf):
-    """Copies data to input tensor."""
-    result, mapinfo = buf.map(Gst.MapFlags.READ)
-    if result:
-        np_buffer = np.reshape(np.frombuffer(mapinfo.data, dtype=np.uint8), input_image_size(interpreter))
-        input_tensor(interpreter)[:, :] = np_buffer
-        buf.unmap(mapinfo)
 
 def output_tensor(interpreter, i):
     """Returns dequantized output tensor if quantized before."""
@@ -61,14 +47,3 @@ def output_tensor(interpreter, i):
     if scale == 0:
         return output_data - zero_point
     return scale * (output_data - zero_point)
-
-def avg_fps_counter(window_size):
-    window = collections.deque(maxlen=window_size)
-    prev = time.monotonic()
-    yield 0.0  # First fps value.
-
-    while True:
-        curr = time.monotonic()
-        window.append(curr - prev)
-        prev = curr
-        yield len(window) / sum(window)
