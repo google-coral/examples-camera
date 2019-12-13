@@ -11,7 +11,13 @@ USB/PCIe/M.2 Accelerator.
 ## Set up your device
 
 1.  First, be sure you have completed the [setup instructions for your Coral
-    device](https://coral.ai/docs/setup/).
+    device](https://coral.ai/docs/setup/). If it's been a while, repeat to be sure
+    you have the latest software.
+
+    Importantly, you should have the latest TensorFlow Lite runtime installed
+    (as per the [Python quickstart](
+    https://www.tensorflow.org/lite/guide/python)). You can check which version is installed
+    using the ```pip3 show tflite_runtime``` command.
 
 2.  Clone this Git repo onto your computer or Dev Board:
 

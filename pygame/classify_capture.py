@@ -14,19 +14,38 @@
 
 """A demo to classify Pygame camera stream."""
 import argparse
-import os
-import io
-import time
+import collections
 from collections import deque
+import common
+import io
 import numpy as np
+import operator
+import os
 import pygame
 import pygame.camera
 from pygame.locals import *
+import tflite_runtime.interpreter as tflite
+import time
 
-import edgetpu.classification.engine
+Category = collections.namedtuple('Category', ['id', 'score'])
+
+def input_tensor(interpreter):
+    """Returns input tensor view as numpy array of shape (height, width, 3)."""
+    tensor_index = interpreter.get_input_details()[0]['index']
+    return interpreter.tensor(tensor_index)()[0]
+
+def get_output(interpreter, top_k, score_threshold):
+    """Returns no more than top_k categories with score >= score_threshold."""
+    scores = common.output_tensor(interpreter, 0)
+    categories = [
+        Category(i, scores[i])
+        for i in np.argpartition(scores, -top_k)[-top_k:]
+        if scores[i] >= score_threshold
+    ]
+    return sorted(categories, key=operator.itemgetter(1), reverse=True)
 
 def main():
-    default_model_dir = "../all_models"
+    default_model_dir = '../all_models'
     default_model = 'mobilenet_v2_1.0_224_quant_edgetpu.tflite'
     default_labels = 'imagenet_labels.txt'
     parser = argparse.ArgumentParser()
@@ -40,15 +59,16 @@ def main():
         pairs = (l.strip().split(maxsplit=1) for l in f.readlines())
         labels = dict((int(k), v) for k, v in pairs)
 
-    engine = edgetpu.classification.engine.ClassificationEngine(args.model)
+    interpreter = common.make_interpreter(args.model)
+    interpreter.allocate_tensors()
 
     pygame.init()
     pygame.camera.init()
     camlist = pygame.camera.list_cameras()
 
-    print("By default using camera: ", camlist[-1])
+    print('By default using camera: ', camlist[-1])
     camera = pygame.camera.Camera(camlist[-1], (640, 480)) 
-    _, width, height, channels = engine.get_input_tensor_shape()
+    width, height, channels = common.input_image_size(interpreter)
     camera.start()
     try:
         fps = deque(maxlen=20)
@@ -58,13 +78,15 @@ def main():
             imagen = pygame.transform.scale(imagen, (width, height))
             input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
             start_ms = time.time()
-            results = engine.classify_with_input_tensor(input, top_k=3)
+            common.input_tensor(interpreter)[:,:] = np.reshape(input, (common.input_image_size(interpreter)))
+            interpreter.invoke()
+            results = get_output(interpreter, top_k=3, score_threshold=0)
             inference_ms = (time.time() - start_ms)*1000.0
             fps.append(time.time())
             fps_ms = len(fps)/(fps[-1] - fps[0])
-            annotate_text = "Inference: %5.2fms FPS: %3.1f" % (inference_ms, fps_ms)
+            annotate_text = 'Inference: {:5.2f}ms FPS: {:3.1f}'.format(inference_ms, fps_ms)
             for result in results:
-               annotate_text += "\n%.0f%% %s" % (100*result[1], labels[result[0]])
+               annotate_text += '\n{:.0f}% {}'.format(100*result[1], labels[result[0]])
             print(annotate_text)
     finally:
         camera.stop()
