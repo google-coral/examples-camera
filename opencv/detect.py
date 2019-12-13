@@ -98,7 +98,8 @@ def main():
             break
         cv2_im = frame
 
-        pil_im = Image.fromarray(cv2_im)
+        cv2_im_rgb = cv2.cvtColor(cv2_im, cv2.COLOR_BGR2RGB)
+        pil_im = Image.fromarray(cv2_im_rgb)
 
         common.set_input(interpreter, pil_im)
         interpreter.invoke()
