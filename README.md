@@ -55,6 +55,9 @@ README file for the respective subfolder.
   * __OpenCV__ Python example using OpenCV to obtain camera frames.
     Use ```install_requirements.sh``` to make sure all the dependencies are
     present.
+  * __NativeApp__ C++ example using gstreamer to obtain camera frames.
+    See README in the nativeapp directory on how to compile for the
+    Coral DevBoard.
 
 ## Canned models
 
