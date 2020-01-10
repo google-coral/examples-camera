@@ -23,8 +23,12 @@ if grep -s -q "MX8MQ" /sys/firmware/devicetree/base/model; then
   fi
 fi
 
-sudo pip3 install opencv-contrib-python
-sudo apt-get -y install libjasper1 libhdf5-100 libqtgui4 libatlas-base-dev libqt4-test
-sudo apt install python3-opencv
-# For Rasperry Pi: this command works for Raspbian Buster and onwwards. For older versions
+# For Raspbian Buster and onwards the following works. For older versions
 # you can build OpenCV yourself or install the unofficial opencv-contrib-python package.
+
+# Lock to this version due to bug: https://github.com/piwheels/packages/issues/59
+sudo pip3 install opencv-contrib-python==4.1.0.25
+
+# Dependencies
+sudo apt-get -y install libjasper1 libhdf5-1* libqtgui4 libatlas-base-dev libqt4-test
+sudo apt install python3-opencv
