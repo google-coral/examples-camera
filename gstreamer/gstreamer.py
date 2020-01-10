@@ -201,21 +201,26 @@ def detectCoralDevBoard():
   except: pass
   return False
 
-def run_pipeline(user_function, appsink_size):
-    # For default camera (Coral Camera w/ Dev Board):
-    PIPELINE = 'v4l2src device=/dev/video0 ! {src_caps}'
-    # For alternative camera (USB camera w/ Dev Board):
-    #PIPELINE = 'v4l2src device=/dev/video1 ! {src_caps}'
-    SRC_CAPS = 'video/x-raw,width={width},height={height},framerate=30/1'
+def run_pipeline(user_function,
+                 src_size,
+                 appsink_size,
+                 videosrc='/dev/video1',
+                 videofmt='raw'):
+    if videofmt == 'h264':
+        SRC_CAPS = 'video/x-h264,width={width},height={height},framerate=30/1'
+    elif videofmt == 'jpeg':
+        SRC_CAPS = 'image/jpeg,width={width},height={height},framerate=30/1'
+    else:
+        SRC_CAPS = 'video/x-raw,width={width},height={height},framerate=30/1'
+    PIPELINE = 'v4l2src device=%s ! {src_caps}'%videosrc
+
     if detectCoralDevBoard():
         scale_caps = None
-        src_size = (1920, 1080)
-        PIPELINE += """ ! glupload ! tee name=t
+        PIPELINE += """ ! decodebin ! glupload ! tee name=t
             t. ! queue ! glfilterbin filter=glbox name=glbox ! {sink_caps} ! {sink_element}
             t. ! queue ! glsvgoverlaysink name=overlaysink
         """
     else:
-        src_size = (640, 480)
         scale = min(appsink_size[0] / src_size[0], appsink_size[1] / src_size[1])
         scale = tuple(int(x * scale) for x in src_size)
         scale_caps = 'video/x-raw,width={width},height={height}'.format(width=scale[0], height=scale[1])

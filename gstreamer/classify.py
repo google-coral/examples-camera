@@ -12,7 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A demo which runs object classification on camera frames."""
+"""A demo which runs object classification on camera frames.
+
+Run default object detection:
+python3 classify.py
+
+Choose different camera and input encoding
+python3 classify.py --videosrc /dev/video1 --videofmt jpeg
+"""
+
 import argparse
 import collections
 import common
@@ -62,6 +70,11 @@ def main():
                         help='number of categories with highest score to display')
     parser.add_argument('--threshold', type=float, default=0.1,
                         help='classifier score threshold')
+    parser.add_argument('--videosrc', help='Which video source to use. ',
+                        default='/dev/video0')
+    parser.add_argument('--videofmt', help='Input video format.',
+                        default='raw',
+                        choices=['raw', 'h264', 'jpeg'])
     args = parser.parse_args()
 
     print('Loading {} with {} labels.'.format(args.model, args.labels))
@@ -92,7 +105,11 @@ def main():
       print(' '.join(text_lines))
       return generate_svg(src_size, text_lines)
 
-    result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
+    result = gstreamer.run_pipeline(user_callback,
+                                    src_size=(640, 480),
+                                    appsink_size=inference_size,
+                                    videosrc=args.videosrc,
+                                    videofmt=args.videofmt)
 
 if __name__ == '__main__':
     main()

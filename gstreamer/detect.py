@@ -14,8 +14,13 @@
 
 """A demo which runs object detection on camera frames using GStreamer.
 
-TEST_DATA=../all_models
+Run default object detection:
+python3 detect.py
 
+Choose different camera and input encoding
+python3 detect.py --videosrc /dev/video1 --videofmt jpeg
+
+TEST_DATA=../all_models
 Run face detection model:
 python3 detect.py \
   --model ${TEST_DATA}/mobilenet_ssd_v2_face_quant_postprocess_edgetpu.tflite
@@ -110,6 +115,11 @@ def main():
                         help='number of categories with highest score to display')
     parser.add_argument('--threshold', type=float, default=0.1,
                         help='classifier score threshold')
+    parser.add_argument('--videosrc', help='Which video source to use. ',
+                        default='/dev/video0')
+    parser.add_argument('--videofmt', help='Input video format.',
+                        default='raw',
+                        choices=['raw', 'h264', 'jpeg'])
     args = parser.parse_args()
 
     print('Loading {} with {} labels.'.format(args.model, args.labels))
@@ -137,7 +147,11 @@ def main():
       print(' '.join(text_lines))
       return generate_svg(src_size, inference_size, inference_box, objs, labels, text_lines)
 
-    result = gstreamer.run_pipeline(user_callback, appsink_size=inference_size)
+    result = gstreamer.run_pipeline(user_callback,
+                                    src_size=(640, 480),
+                                    appsink_size=inference_size,
+                                    videosrc=args.videosrc,
+                                    videofmt=args.videofmt)
 
 if __name__ == '__main__':
     main()
