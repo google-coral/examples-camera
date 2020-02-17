@@ -1,6 +1,6 @@
 # OpenCV camera examples with Coral
 
-This folder contains example code using [OpenVC](https://github.com/opencv/opencv) to obtain
+This folder contains example code using [OpenCV](https://github.com/opencv/opencv) to obtain
 camera images and perform object detection on the Edge TPU.
 
 This code works on Linux using a webcam, Raspberry Pi with the Pi Camera, and on the Coral Dev
