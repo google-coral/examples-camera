@@ -212,7 +212,14 @@ def run_pipeline(user_function,
         SRC_CAPS = 'image/jpeg,width={width},height={height},framerate=30/1'
     else:
         SRC_CAPS = 'video/x-raw,width={width},height={height},framerate=30/1'
-    PIPELINE = 'v4l2src device=%s ! {src_caps}'%videosrc
+    if videosrc.startswith('/dev/video'):
+        PIPELINE = 'v4l2src device=%s ! {src_caps}'%videosrc
+    else:
+        demux =  'avidemux' if videosrc.endswith('avi') else 'qtdemux'
+        PIPELINE = """filesrc location=%s ! %s name=demux  demux.video_0
+                    ! queue ! decodebin  ! videorate
+                    ! videoconvert n-threads=4 ! videoscale n-threads=4
+                    ! {src_caps} ! {leaky_q} """ % (videosrc, demux)
 
     if detectCoralDevBoard():
         scale_caps = None
