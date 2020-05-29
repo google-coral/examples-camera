@@ -214,6 +214,10 @@ def run_pipeline(user_function,
         SRC_CAPS = 'video/x-raw,width={width},height={height},framerate=30/1'
     if videosrc.startswith('/dev/video'):
         PIPELINE = 'v4l2src device=%s ! {src_caps}'%videosrc
+    elif videosrc.startswith('http'):
+        PIPELINE = 'souphttpsrc location=%s'%videosrc
+    elif videosrc.startswith('rtsp'):
+        PIPELINE = 'rtspsrc location=%s'%videosrc
     else:
         demux =  'avidemux' if videosrc.endswith('avi') else 'qtdemux'
         PIPELINE = """filesrc location=%s ! %s name=demux  demux.video_0
