@@ -47,7 +47,8 @@ def set_input(interpreter, buf):
     """Copies data to input tensor."""
     result, mapinfo = buf.map(Gst.MapFlags.READ)
     if result:
-        np_buffer = np.reshape(np.frombuffer(mapinfo.data, dtype=np.uint8), input_image_size(interpreter))
+        np_buffer = np.reshape(np.frombuffer(mapinfo.data, dtype=np.uint8),
+            interpreter.get_input_details()[0]['shape'])
         input_tensor(interpreter)[:, :] = np_buffer
         buf.unmap(mapinfo)
 
