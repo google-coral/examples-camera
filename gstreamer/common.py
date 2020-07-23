@@ -36,7 +36,7 @@ def make_interpreter(model_file):
 def input_image_size(interpreter):
     """Returns input size as (width, height, channels) tuple."""
     _, height, width, channels = interpreter.get_input_details()[0]['shape']
-    return width, height, channels
+    return height, width, channels
 
 def input_tensor(interpreter):
     """Returns input tensor view as numpy array of shape (height, width, channels)."""
