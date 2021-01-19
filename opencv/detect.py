@@ -27,48 +27,14 @@ python3 detect.py \
 
 """
 import argparse
-import collections
-import common
 import cv2
-import numpy as np
 import os
-from PIL import Image
-import re
-import tflite_runtime.interpreter as tflite
 
-Object = collections.namedtuple('Object', ['id', 'score', 'bbox'])
-
-def load_labels(path):
-    p = re.compile(r'\s*(\d+)(.+)')
-    with open(path, 'r', encoding='utf-8') as f:
-       lines = (p.match(line).groups() for line in f.readlines())
-       return {int(num): text.strip() for num, text in lines}
-
-class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
-    """Bounding box.
-    Represents a rectangle which sides are either vertical or horizontal, parallel
-    to the x or y axis.
-    """
-    __slots__ = ()
-
-def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
-    """Returns list of detected objects."""
-    boxes = common.output_tensor(interpreter, 0)
-    class_ids = common.output_tensor(interpreter, 1)
-    scores = common.output_tensor(interpreter, 2)
-    count = int(common.output_tensor(interpreter, 3))
-
-    def make(i):
-        ymin, xmin, ymax, xmax = boxes[i]
-        return Object(
-            id=int(class_ids[i]),
-            score=scores[i],
-            bbox=BBox(xmin=np.maximum(0.0, xmin),
-                      ymin=np.maximum(0.0, ymin),
-                      xmax=np.minimum(1.0, xmax),
-                      ymax=np.minimum(1.0, ymax)))
-
-    return [make(i) for i in range(top_k) if scores[i] >= score_threshold]
+from pycoral.adapters.common import input_size
+from pycoral.adapters.detect import get_objects
+from pycoral.utils.dataset import read_label_file
+from pycoral.utils.edgetpu import make_interpreter
+from pycoral.utils.edgetpu import run_inference
 
 def main():
     default_model_dir = '../all_models'
@@ -87,9 +53,10 @@ def main():
     args = parser.parse_args()
 
     print('Loading {} with {} labels.'.format(args.model, args.labels))
-    interpreter = common.make_interpreter(args.model)
+    interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
-    labels = load_labels(args.labels)
+    labels = read_label_file(args.labels)
+    inference_size = input_size(interpreter)
 
     cap = cv2.VideoCapture(args.camera_idx)
 
@@ -100,12 +67,10 @@ def main():
         cv2_im = frame
 
         cv2_im_rgb = cv2.cvtColor(cv2_im, cv2.COLOR_BGR2RGB)
-        pil_im = Image.fromarray(cv2_im_rgb)
-
-        common.set_input(interpreter, pil_im)
-        interpreter.invoke()
-        objs = get_output(interpreter, score_threshold=args.threshold, top_k=args.top_k)
-        cv2_im = append_objs_to_img(cv2_im, objs, labels)
+        cv2_im_rgb = cv2.resize(cv2_im_rgb, inference_size)
+        run_inference(interpreter, cv2_im_rgb.tobytes())
+        objs = get_objects(interpreter, args.threshold)[:args.top_k]
+        cv2_im = append_objs_to_img(cv2_im, inference_size, objs, labels)
 
         cv2.imshow('frame', cv2_im)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -114,11 +79,14 @@ def main():
     cap.release()
     cv2.destroyAllWindows()
 
-def append_objs_to_img(cv2_im, objs, labels):
+def append_objs_to_img(cv2_im, inference_size, objs, labels):
     height, width, channels = cv2_im.shape
+    scale_x, scale_y = width / inference_size[0], height / inference_size[1]
     for obj in objs:
-        x0, y0, x1, y1 = list(obj.bbox)
-        x0, y0, x1, y1 = int(x0*width), int(y0*height), int(x1*width), int(y1*height)
+        bbox = obj.bbox.scale(scale_x, scale_y)
+        x0, y0 = int(bbox.xmin), int(bbox.ymin)
+        x1, y1 = int(bbox.xmax), int(bbox.ymax)
+
         percent = int(100 * obj.score)
         label = '{}% {}'.format(percent, labels.get(obj.id, obj.id))
 

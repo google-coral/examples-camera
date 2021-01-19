@@ -14,61 +14,19 @@
 
 """A demo to run the detector in a Pygame camera stream."""
 import argparse
-import collections
-from collections import deque
-import common
-import io
-import numpy as np
 import os
+import sys
+import time
+
 import pygame
 import pygame.camera
 from pygame.locals import *
-import re
-import sys
-import tflite_runtime.interpreter as tflite
-import time
 
-Object = collections.namedtuple('Object', ['id', 'score', 'bbox'])
-
-def load_labels(path):
-    p = re.compile(r'\s*(\d+)(.+)')
-    with open(path, 'r', encoding='utf-8') as f:
-       lines = (p.match(line).groups() for line in f.readlines())
-       return {int(num): text.strip() for num, text in lines}
-
-def input_tensor(interpreter):
-    """Returns input tensor view as numpy array of shape (height, width, 3)."""
-    tensor_index = interpreter.get_input_details()[0]['index']
-    return interpreter.tensor(tensor_index)()[0]
-
-def set_interpreter(interpreter, data):
-    input_tensor(interpreter)[:,:] = np.reshape(data, (common.input_image_size(interpreter)))
-    interpreter.invoke()
-
-class BBox(collections.namedtuple('BBox', ['xmin', 'ymin', 'xmax', 'ymax'])):
-    """Bounding box.
-    Represents a rectangle which sides are either vertical or horizontal, parallel
-    to the x or y axis.
-    """
-    __slots__ = ()
-
-def get_output(interpreter, score_threshold, top_k, image_scale=1.0):
-    """Returns list of detected objects."""
-    boxes = common.output_tensor(interpreter, 0)
-    class_ids = common.output_tensor(interpreter, 1)
-    scores = common.output_tensor(interpreter, 2)
-
-    def make(i):
-        ymin, xmin, ymax, xmax = boxes[i]
-        return Object(
-            id=int(class_ids[i]),
-            score=scores[i],
-            bbox=BBox(xmin=np.maximum(0.0, xmin),
-                      ymin=np.maximum(0.0, ymin),
-                      xmax=np.minimum(1.0, xmax),
-                      ymax=np.minimum(1.0, ymax)))
-
-    return [make(i) for i in range(top_k) if scores[i] >= score_threshold]
+from pycoral.adapters.common import input_size
+from pycoral.adapters.detect import get_objects
+from pycoral.utils.dataset import read_label_file
+from pycoral.utils.edgetpu import make_interpreter
+from pycoral.utils.edgetpu import run_inference
 
 def main():
     cam_w, cam_h = 640, 480
@@ -92,9 +50,9 @@ def main():
 
     print('Loading {} with {} labels.'.format(args.model, args.labels))
 
-    interpreter = common.make_interpreter(args.model)
+    interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
-    labels = load_labels(args.labels)
+    labels = read_label_file(args.labels)
 
     pygame.init()
     pygame.font.init()
@@ -103,7 +61,7 @@ def main():
     pygame.camera.init()
     camlist = pygame.camera.list_cameras()
 
-    w, h, _ = common.input_image_size(interpreter)
+    inference_size = input_size(interpreter)
 
     print('By default using camera: ', camlist[-1])
     camera = pygame.camera.Camera(camlist[-1], (cam_w, cam_h))
@@ -118,30 +76,29 @@ def main():
     red = pygame.Color(255, 0, 0)
 
     camera.start()
+    scale_x, scale_y = cam_w / inference_size[0], cam_h / inference_size[1]
     try:
         last_time = time.monotonic()
         while True:
             mysurface = camera.get_image()
-            imagen = pygame.transform.scale(mysurface, (w, h))
-            input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
+            imagen = pygame.transform.scale(mysurface, inference_size)
             start_time = time.monotonic()
-            common.input_tensor(interpreter)[:,:] = np.reshape(input, (common.input_image_size(interpreter)))
-            interpreter.invoke()
-            results = get_output(interpreter, score_threshold=args.threshold, top_k=args.top_k)
+            run_inference(interpreter, imagen.get_buffer().raw)
+            results = get_objects(interpreter, args.threshold)[:args.top_k]
             stop_time = time.monotonic()
             inference_ms = (stop_time - start_time)*1000.0
             fps_ms = 1.0 / (stop_time - last_time)
             last_time = stop_time
             annotate_text = 'Inference: {:5.2f}ms FPS: {:3.1f}'.format(inference_ms, fps_ms)
             for result in results:
-               x0, y0, x1, y1 = list(result.bbox)
-               rect = pygame.Rect(x0 * cam_w, y0 * cam_h, (x1 - x0) * cam_w, (y1 - y0) * cam_h)
-               pygame.draw.rect(mysurface, red, rect, 1)
-               label = '{:.0f}% {}'.format(100*result.score, labels.get(result.id, result.id))
-               text = font.render(label, True, red)
-               print(label, ' ', end='')
-               mysurface.blit(text, (x0 * cam_w , y0 * cam_h))
-            text = font.render(annotate_text, True, red)
+                bbox = result.bbox.scale(scale_x, scale_y)
+                rect = pygame.Rect(bbox.xmin, bbox.ymin, bbox.width, bbox.height)
+                pygame.draw.rect(mysurface, red, rect, 1)
+                label = '{:.0f}% {}'.format(100*result.score, labels.get(result.id, result.id))
+                text = font.render(label, True, red)
+                print(label, ' ', end='')
+                mysurface.blit(text, (bbox.xmin, bbox.ymin))
+                text = font.render(annotate_text, True, red)
             print(annotate_text)
             mysurface.blit(text, (0, 0))
             display.blit(mysurface, (0, 0))

@@ -40,6 +40,11 @@ This code works on Linux using a webcam, Raspberry Pi with the Pi Camera, and on
     bash install_requirements.sh
     ```
 
+## Running on Coral Dev Board
+Set up display before running:
+```
+export DISPLAY=":0"
+```
 
 ## Run the classification demo
 ```

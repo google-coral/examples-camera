@@ -22,40 +22,22 @@ python3 classify.py --videosrc /dev/video1 --videofmt jpeg
 """
 
 import argparse
-import collections
-import common
 import gstreamer
-import numpy as np
-import operator
 import os
-import re
-import svgwrite
 import time
 
-Category = collections.namedtuple('Category', ['id', 'score'])
-
-def load_labels(path):
-    p = re.compile(r'\s*(\d+)(.+)')
-    with open(path, 'r', encoding='utf-8') as f:
-       lines = (p.match(line).groups() for line in f.readlines())
-       return {int(num): text.strip() for num, text in lines}
+from common import avg_fps_counter, SVG
+from pycoral.utils.dataset import read_label_file
+from pycoral.utils.edgetpu import make_interpreter
+from pycoral.utils.edgetpu import run_inference
+from pycoral.adapters.common import input_size
+from pycoral.adapters.classify import get_classes
 
 def generate_svg(size, text_lines):
-    dwg = svgwrite.Drawing('', size=size)
+    svg = SVG(size)
     for y, line in enumerate(text_lines, start=1):
-      dwg.add(dwg.text(line, insert=(11, y*20+1), fill='black', font_size='20'))
-      dwg.add(dwg.text(line, insert=(10, y*20), fill='white', font_size='20'))
-    return dwg.tostring()
-
-def get_output(interpreter, top_k, score_threshold):
-    """Returns no more than top_k categories with score >= score_threshold."""
-    scores = common.output_tensor(interpreter, 0)
-    categories = [
-        Category(i, scores[i])
-        for i in np.argpartition(scores, -top_k)[-top_k:]
-        if scores[i] >= score_threshold
-    ]
-    return sorted(categories, key=operator.itemgetter(1), reverse=True)
+      svg.add_text(10, y * 20, line, 20)
+    return svg.finish()
 
 def main():
     default_model_dir = '../all_models'
@@ -78,22 +60,20 @@ def main():
     args = parser.parse_args()
 
     print('Loading {} with {} labels.'.format(args.model, args.labels))
-    interpreter = common.make_interpreter(args.model)
+    interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
-    labels = load_labels(args.labels)
+    labels = read_label_file(args.labels)
+    inference_size = input_size(interpreter)
 
-    w, h, _  = common.input_image_size(interpreter)
-    inference_size = (w, h)
     # Average fps over last 30 frames.
-    fps_counter = common.avg_fps_counter(30)
+    fps_counter = avg_fps_counter(30)
 
     def user_callback(input_tensor, src_size, inference_box):
       nonlocal fps_counter
       start_time = time.monotonic()
-      common.set_input(interpreter, input_tensor)
-      interpreter.invoke()
-      # For larger input image sizes, use the edgetpu.classification.engine for better performance
-      results = get_output(interpreter, args.top_k, args.threshold)
+      run_inference(interpreter, input_tensor)
+
+      results = get_classes(interpreter, args.top_k, args.threshold)
       end_time = time.monotonic()
       text_lines = [
           ' ',

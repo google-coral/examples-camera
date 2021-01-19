@@ -14,35 +14,18 @@
 
 """A demo to classify Pygame camera stream."""
 import argparse
-import collections
-from collections import deque
-import common
-import io
-import numpy as np
-import operator
 import os
+import time
+
 import pygame
 import pygame.camera
 from pygame.locals import *
-import tflite_runtime.interpreter as tflite
-import time
 
-Category = collections.namedtuple('Category', ['id', 'score'])
-
-def input_tensor(interpreter):
-    """Returns input tensor view as numpy array of shape (height, width, 3)."""
-    tensor_index = interpreter.get_input_details()[0]['index']
-    return interpreter.tensor(tensor_index)()[0]
-
-def get_output(interpreter, top_k, score_threshold):
-    """Returns no more than top_k categories with score >= score_threshold."""
-    scores = common.output_tensor(interpreter, 0)
-    categories = [
-        Category(i, scores[i])
-        for i in np.argpartition(scores, -top_k)[-top_k:]
-        if scores[i] >= score_threshold
-    ]
-    return sorted(categories, key=operator.itemgetter(1), reverse=True)
+from pycoral.utils.dataset import read_label_file
+from pycoral.utils.edgetpu import make_interpreter
+from pycoral.utils.edgetpu import run_inference
+from pycoral.adapters.common import input_size
+from pycoral.adapters.classify import get_classes
 
 def main():
     default_model_dir = '../all_models'
@@ -59,7 +42,7 @@ def main():
         pairs = (l.strip().split(maxsplit=1) for l in f.readlines())
         labels = dict((int(k), v) for k, v in pairs)
 
-    interpreter = common.make_interpreter(args.model)
+    interpreter = make_interpreter(args.model)
     interpreter.allocate_tensors()
 
     pygame.init()
@@ -68,22 +51,20 @@ def main():
 
     print('By default using camera: ', camlist[-1])
     camera = pygame.camera.Camera(camlist[-1], (640, 480)) 
-    width, height, channels = common.input_image_size(interpreter)
+    inference_size = input_size(interpreter)
     camera.start()
     try:
-        fps = deque(maxlen=20)
-        fps.append(time.time())
+        last_time = time.monotonic()
         while True:
             imagen = camera.get_image()
-            imagen = pygame.transform.scale(imagen, (width, height))
-            input = np.frombuffer(imagen.get_buffer(), dtype=np.uint8)
+            imagen = pygame.transform.scale(imagen, inference_size)
             start_ms = time.time()
-            common.input_tensor(interpreter)[:,:] = np.reshape(input, (common.input_image_size(interpreter)))
-            interpreter.invoke()
-            results = get_output(interpreter, top_k=3, score_threshold=0)
+            run_inference(interpreter, imagen.get_buffer().raw)
+            results = get_classes(interpreter, top_k=3, score_threshold=0)
+            stop_time = time.monotonic()
             inference_ms = (time.time() - start_ms)*1000.0
-            fps.append(time.time())
-            fps_ms = len(fps)/(fps[-1] - fps[0])
+            fps_ms = 1.0 / (stop_time - last_time)
+            last_time = stop_time
             annotate_text = 'Inference: {:5.2f}ms FPS: {:3.1f}'.format(inference_ms, fps_ms)
             for result in results:
                annotate_text += '\n{:.0f}% {}'.format(100*result[1], labels[result[0]])

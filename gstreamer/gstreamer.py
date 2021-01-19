@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import sys
-import svgwrite
 import threading
 
 import gi
@@ -121,13 +120,8 @@ class GstPipeline:
                 gstbuffer = self.gstbuffer
                 self.gstbuffer = None
 
-            # Passing Gst.Buffer as input tensor avoids 2 copies of it:
-            # * Python bindings copies the data when mapping gstbuffer
-            # * Numpy copies the data when creating ndarray.
-            # This requires a recent version of the python3-edgetpu package. If this
-            # raises an exception please make sure dependencies are up to date.
-            input_tensor = gstbuffer
-            svg = self.user_function(input_tensor, self.src_size, self.get_box())
+            # Passing Gst.Buffer as input tensor avoids 2 copies of it.
+            svg = self.user_function(gstbuffer, self.src_size, self.get_box())
             if svg:
                 if self.overlay:
                     self.overlay.set_property('data', svg)
