@@ -63,8 +63,20 @@ def main():
 
     inference_size = input_size(interpreter)
 
-    print('By default using camera: ', camlist[-1])
-    camera = pygame.camera.Camera(camlist[-1], (cam_w, cam_h))
+    camera = None
+    for cam in camlist:
+        try:
+            camera = pygame.camera.Camera(cam, (cam_w, cam_h))
+            camera.start()
+            print(str(cam) + ' opened')
+            break
+        except SystemError as e:
+            print('Failed to open {}: {}'.format(str(cam), str(e)))
+            camera = None
+    if not camera:
+      sys.stderr.write("\nERROR: Unable to open a camera.\n")
+      sys,exit(1)
+
     try:
       display = pygame.display.set_mode((cam_w, cam_h), 0)
     except pygame.error as e:
@@ -75,7 +87,6 @@ def main():
 
     red = pygame.Color(255, 0, 0)
 
-    camera.start()
     scale_x, scale_y = cam_w / inference_size[0], cam_h / inference_size[1]
     try:
         last_time = time.monotonic()
@@ -98,7 +109,7 @@ def main():
                 text = font.render(label, True, red)
                 print(label, ' ', end='')
                 mysurface.blit(text, (bbox.xmin, bbox.ymin))
-                text = font.render(annotate_text, True, red)
+            text = font.render(annotate_text, True, red)
             print(annotate_text)
             mysurface.blit(text, (0, 0))
             display.blit(mysurface, (0, 0))

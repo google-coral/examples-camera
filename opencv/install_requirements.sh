@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if grep -s -q "MX8MQ" /sys/firmware/devicetree/base/model; then
+if grep -s -q "Mendel" /etc/os-release; then
   MENDEL_VER="$(cat /etc/mendel_version)"
   if [[ "$MENDEL_VER" == "1.0" || "$MENDEL_VER" == "2.0" || "$MENDEL_VER" == "3.0" ]]; then
     echo "Your version of Mendel is not compatible with OpenCV."

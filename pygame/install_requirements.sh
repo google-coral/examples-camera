@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if grep -s -q "MX8MQ" /sys/firmware/devicetree/base/model; then
+if grep -s -q "Mendel" /etc/os-release; then
   echo "Installing DevBoard specific dependencies"
   sudo apt-get install -y python3-pygame
 else
