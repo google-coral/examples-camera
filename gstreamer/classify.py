@@ -54,6 +54,8 @@ def main():
                         help='classifier score threshold')
     parser.add_argument('--videosrc', help='Which video source to use. ',
                         default='/dev/video0')
+    parser.add_argument('--headless', help='Run without displaying the video.',
+                        default=False, type=bool)
     parser.add_argument('--videofmt', help='Input video format.',
                         default='raw',
                         choices=['raw', 'h264', 'jpeg'])
@@ -89,7 +91,8 @@ def main():
                                     src_size=(640, 480),
                                     appsink_size=inference_size,
                                     videosrc=args.videosrc,
-                                    videofmt=args.videofmt)
+                                    videofmt=args.videofmt,
+                                    headless=args.headless)
 
 if __name__ == '__main__':
     main()
