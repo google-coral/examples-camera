@@ -29,7 +29,7 @@ to simplify these instructions we then copy the whole tensorflow tree over to
 the device.
 
 On the host computer run the below commands. To find the git commit to sync to
-look for __TENSORFLOW_COMMIT__  in this [WORKSPACE](https://github.com/google-coral/edgetpu/blob/master/WORKSPACE) file. (For correct behavior it's __important__
+look for __TENSORFLOW_COMMIT__  in this [WORKSPACE](https://github.com/google-coral/libedgetpu/blob/master/workspace.bzl) file. (For correct behavior it's __important__
 that the tensorflow version matches that of libedgetpu.so).
 
 On the host run:
