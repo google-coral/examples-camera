@@ -1,0 +1,4 @@
+build --define darwinn_portable=1
+build --experimental_repo_remote_exec
+build --linkopt=-lusb-1.0
+build --copt=-w

@@ -1,0 +1,11 @@
+---
+Language:        Cpp
+BasedOnStyle:  Google
+AccessModifierOffset: -2
+AlignAfterOpenBracket: AlwaysBreak
+AllowShortFunctionsOnASingleLine: Inline
+BreakBeforeBinaryOperators: NonAssignment
+ColumnLimit: 100
+DerivePointerAlignment: false
+Standard:        Cpp11
+...

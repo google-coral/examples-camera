@@ -9,18 +9,18 @@
 namespace coral {
 
 class CameraStreamer {
- public:
+public:
   CameraStreamer() = default;
   virtual ~CameraStreamer() = default;
-  CameraStreamer(const CameraStreamer &) = delete;
-  CameraStreamer &operator=(const CameraStreamer &) = delete;
+  CameraStreamer(const CameraStreamer&) = delete;
+  CameraStreamer& operator=(const CameraStreamer&) = delete;
 
   struct UserData {
-    std::function<void(uint8_t *pixels, int length, void *args)> f;
-    void *args;
+    std::function<void(uint8_t* pixels, int length, void* args)> f;
+    void* args;
   };
 
-  void RunPipeline(const gchar *pipeline_string, UserData user_data);
+  void RunPipeline(const gchar* pipeline_string, UserData user_data);
 };
 
 }  // namespace coral

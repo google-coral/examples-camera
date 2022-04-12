@@ -1,4 +1,5 @@
 #include <sys/stat.h>
+
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -6,8 +7,8 @@
 #include "camerastreamer.h"
 #include "inferencewrapper.h"
 
-using coral::InferenceWrapper;
 using coral::CameraStreamer;
+using coral::InferenceWrapper;
 
 // GStreamer definitions
 #define LEAKY_Q " queue max-size-buffers=1 leaky=downstream "
@@ -27,13 +28,11 @@ const gchar* kPipeline =
 void interpret_frame(const uint8_t* pixels, int length, void* args) {
   InferenceWrapper* inferencer = reinterpret_cast<InferenceWrapper*>(args);
 
-  std::pair<std::string, float> results =
-      inferencer->RunInference(pixels, length);
-  std::cout << "Result: " << results.first << " " << results.second
-      << std::endl;
+  std::pair<std::string, float> results = inferencer->RunInference(pixels, length);
+  std::cout << "Result: " << results.first << " " << results.second << std::endl;
 }
 
-void check_file(const char *file) {
+void check_file(const char* file) {
   struct stat buf;
   if (stat(file, &buf) != 0) {
     std::cerr << file << " does not exist" << std::endl;
@@ -41,9 +40,8 @@ void check_file(const char *file) {
   }
 }
 
-void usage(char *argv[]) {
-  std::cerr << "Usage: " << argv[0] << " --model model_file --labels label_file"
-      << std::endl;
+void usage(char* argv[]) {
+  std::cerr << "Usage: " << argv[0] << " --model model_file --labels label_file" << std::endl;
   exit(EXIT_FAILURE);
 }
 
@@ -54,7 +52,7 @@ int main(int argc, char* argv[]) {
   if (argc == 5) {
     for (int i = 1; i < argc; ++i) {
       if (std::string(argv[i]) == "--model")
-        model_path =  argv[++i];
+        model_path = argv[++i];
       else if (std::string(argv[i]) == "--labels")
         label_path = argv[++i];
       else

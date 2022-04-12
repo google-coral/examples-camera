@@ -7,27 +7,27 @@
 #include <vector>
 
 #include "tensorflow/lite/interpreter.h"
+#include "tflite/public/edgetpu.h"
 
 namespace coral {
 
 class InferenceWrapper {
- public:
+public:
   ~InferenceWrapper() = default;
 
-  InferenceWrapper(const std::string& model_path,
-                   const std::string& label_path);
+  InferenceWrapper(const std::string& model_path, const std::string& label_path);
 
   // InferenceWrapper is neither copyable nor movable
   InferenceWrapper(const InferenceWrapper&) = delete;
   InferenceWrapper& operator=(const InferenceWrapper&) = delete;
 
   // Runs inference using given `interpreter`
-  std::pair<std::string, float> RunInference(const uint8_t *input_data,
-                                             int input_size);
+  std::pair<std::string, float> RunInference(const uint8_t* input_data, int input_size);
 
- private:
+private:
   InferenceWrapper() = default;
   std::vector<std::string> labels_;
+  std::shared_ptr<edgetpu::EdgeTpuContext> edgetpu_context_;
   std::unique_ptr<tflite::Interpreter> interpreter_;
 };
 
