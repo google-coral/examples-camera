@@ -81,7 +81,7 @@ def main():
     parser.add_argument('--threshold', type=float, default=0.1,
                         help='classifier score threshold')
     parser.add_argument('--videosrc', help='Which video source to use. ',
-                        default='/dev/video0')
+                        default='/dev/video1')
     parser.add_argument('--videofmt', help='Input video format.',
                         default='raw',
                         choices=['raw', 'h264', 'jpeg'])
@@ -111,7 +111,7 @@ def main():
       return generate_svg(src_size, inference_box, objs, labels, text_lines)
 
     result = gstreamer.run_pipeline(user_callback,
-                                    src_size=(640, 480),
+                                    src_size=(640, 360),
                                     appsink_size=inference_size,
                                     videosrc=args.videosrc,
                                     videofmt=args.videofmt)
