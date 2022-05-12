@@ -8,7 +8,7 @@ The docker build was tested on the Dev Board, however, it can can support k8, aa
 
 1. If you haven't done so already, set up your board according to [Get started with the Dev Board](https://coral.ai/docs/dev-board/get-started).
 
-2. To build:
+2. Cross-compile for aarch64 from your Linux desktop (do not run this on the Dev Board)::
 ```
 cd nativeapp
 make DOCKER_TARGETS=mendelcam DOCKER_CPUS=aarch64 docker-build
