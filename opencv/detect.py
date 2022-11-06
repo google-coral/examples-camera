@@ -29,6 +29,7 @@ python3 detect.py \
 import argparse
 import cv2
 import os
+import time
 
 from pycoral.adapters.common import input_size
 from pycoral.adapters.detect import get_objects
@@ -59,19 +60,39 @@ def main():
     inference_size = input_size(interpreter)
 
     cap = cv2.VideoCapture(args.camera_idx)
-
+    # Variables to calculate FPS
+    counter, fps = 0, 0
+    start_time = time.time()
+    
+    # Visualization parameters
+    row_size = 20  # pixels
+    left_margin = 24  # pixels
+    text_color = (0, 0, 255)  # red
+    font_size = 1
+    font_thickness = 1
+    fps_avg_frame_count = 10
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
         cv2_im = frame
-
+        counter += 1
+        # Calculate the FPS
+        if counter % fps_avg_frame_count == 0:
+            end_time = time.time()
+            fps = fps_avg_frame_count / (end_time - start_time)
+            start_time = time.time()
+            
+            
         cv2_im_rgb = cv2.cvtColor(cv2_im, cv2.COLOR_BGR2RGB)
         cv2_im_rgb = cv2.resize(cv2_im_rgb, inference_size)
         run_inference(interpreter, cv2_im_rgb.tobytes())
         objs = get_objects(interpreter, args.threshold)[:args.top_k]
         cv2_im = append_objs_to_img(cv2_im, inference_size, objs, labels)
-
+        # Show the FPS
+        fps_text = 'FPS = {:.1f}'.format(fps)
+        text_location = (left_margin, row_size)
+        cv2.putText(cv2_im, fps_text, text_location, cv2.FONT_HERSHEY_PLAIN,font_size, text_color, font_thickness)
         cv2.imshow('frame', cv2_im)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
