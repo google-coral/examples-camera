@@ -16,8 +16,8 @@
 if grep -s -q "Mendel" /etc/os-release; then
   echo "No DevBoard specific dependencies"
 else
-  # Install gstreamer 
-  sudo apt-get install -y gstreamer1.0-plugins-bad gstreamer1.0-plugins-good python3-gst-1.0 python3-gi gir1.2-gtk-3.0
+  # Install gstreamer
+  sudo apt-get install -y gstreamer1.0-libav gstreamer1.0-plugins-bad gstreamer1.0-plugins-good python3-gst-1.0 python3-gi gir1.2-gtk-3.0
 
   if grep -s -q "Raspberry Pi" /sys/firmware/devicetree/base/model; then
     echo "Installing Raspberry Pi specific dependencies"
@@ -26,6 +26,6 @@ else
     if ! grep -q "bcm2835-v4l2" /etc/modules; then
       echo bcm2835-v4l2 | sudo tee -a /etc/modules
     fi
-    sudo modprobe bcm2835-v4l2 
+    sudo modprobe bcm2835-v4l2
   fi
 fi
