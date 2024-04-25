@@ -30,7 +30,10 @@ import argparse
 import cv2
 import os
 
+import sys
+sys.path.append('/home/mendel/myenv/lib/python3.7/site-packages')  # Add the path to pycoral
 from pycoral.adapters.common import input_size
+
 from pycoral.adapters.detect import get_objects
 from pycoral.utils.dataset import read_label_file
 from pycoral.utils.edgetpu import make_interpreter
