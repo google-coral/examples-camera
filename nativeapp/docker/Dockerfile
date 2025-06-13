@@ -62,5 +62,6 @@ RUN wget -O /bazel https://github.com/bazelbuild/bazel/releases/download/${BAZEL
     bash /bazel && \
     rm -f /bazel
 
-RUN svn export https://github.com/google-coral/edgetpu/trunk/libedgetpu /libedgetpu
-
+RUN git clone --depth 1 https://github.com/google-coral/libedgetpu.git /tmp/libedgetpu \ 
+    && cp -r /tmp/libedgetpu /libedgetpu \
+    && rm -rf /tmp/libedgetpu
